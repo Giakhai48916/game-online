@@ -970,7 +970,7 @@
     </div>
   </div>
 
-  <!-- MODAL CÀI ĐẶT TỐC ĐỘ QUAY GÓC NHÌN (DÙNG CHUNG CHO MENU / LOBBY / IN-GAME) -->
+  <!-- MODAL CÀI ĐẶT TỐC ĐỘ QUAY GÓC NHÌN -->
   <div id="settings-overlay" class="overlay hidden">
     <div class="panel settings-panel">
       <h2>⚙️ CÀI ĐẶT TỐC ĐỘ XOAY</h2>
@@ -1038,7 +1038,6 @@
     const HIDER_SPEED = 206;
     const ROOM_PREFIX = 'br35v4-';
 
-    // 16 màu Skin đa dạng (tránh màu đỏ đậm để dễ phân biệt Người Bắt)
     const SKINS = [
       { id: 'white',   name: 'Trắng Gốc',    hex: 0xf1f3f8, css: '#f1f3f8' },
       { id: 'silver',  name: 'Bạc Khói',     hex: 0x94a3b8, css: '#94a3b8' },
@@ -1062,14 +1061,13 @@
       { id: 'none',     name: 'Không đội' },
       { id: 'hutao',    name: 'Nón Hutao' },
       { id: 'furina',   name: 'Nón Furina' },
-      { id: 'obito',    name: 'Mặt mạ Obito' },
+      { id: 'obito',    name: 'Mặt nạ Obito' },
       { id: 'mahoraga', name: 'Vòng Mahoraga' },
       { id: 'gojo',     name: 'Tóc Gojo' },
       { id: 'helmet',   name: 'Mũ Bảo Hộ' },
       { id: 'crown',    name: 'Vương Miện' }
     ];
 
-    // Đọc & lưu cài đặt độ nhạy + trang phục vào bộ nhớ trình duyệt
     let userSettings = { touchSens: 1.0, mouseSens: 1.0, invertY: false };
     let myCosmetics = { skin: 'white', hat: 'furina' };
 
@@ -1397,7 +1395,7 @@
 
     function hasLineOfSight(x1, y1, x2, y2) {
       const dist = Math.hypot(x2 - x1, y2 - y1);
-      const steps = Math.ceil(dist / 12);
+      const steps = Math.ceil(dist / 10);
       for (let i = 1; i < steps; i++) {
         const t = i / steps;
         const px = x1 + (x2 - x1) * t, py = y1 + (y2 - y1) * t;
@@ -1422,7 +1420,7 @@
     }
 
     // =========================================================================
-    // 3. MÔ HÌNH 3D NHÂN VẬT + 7 PHỤ KIỆN (HU TAO, FURINA, OBITO, MAHORAGA, GOJO...)
+    // 3. MÔ HÌNH 3D NHÂN VẬT + 7 PHỤ KIỆN
     // =========================================================================
     function createTalismanTexture() {
       const c = document.createElement('canvas'); c.width = 128; c.height = 160;
@@ -1443,13 +1441,10 @@
     }
     const talismanTex = createTalismanTexture();
 
-    // Họa tiết xoắn ốc cam-đen đặc trưng của Mặt nạ Obito
     function createObitoMaskTexture() {
       const c = document.createElement('canvas'); c.width = 256; c.height = 256;
       const g = c.getContext('2d');
-      const cx = 94, cy = 112; // Vị trí lỗ mắt phải (bên trái khi nhìn trực diện)
-
-      // Nền cam bóng với đổ khối nhẹ
+      const cx = 94, cy = 112;
       const bg = g.createRadialGradient(120, 100, 15, 128, 128, 140);
       bg.addColorStop(0, '#ff8547');
       bg.addColorStop(0.55, '#eb6328');
@@ -1457,7 +1452,6 @@
       g.fillStyle = bg;
       g.fillRect(0, 0, 256, 256);
 
-      // Các đường rãnh xoắn ốc đen tỏa ra từ lỗ mắt
       g.strokeStyle = '#1a0c06';
       g.lineCap = 'round';
       const arms = 9;
@@ -1476,16 +1470,13 @@
         g.stroke();
       }
 
-      // Lỗ mắt tròn tối sâu + ánh đỏ nhẹ bên trong
       g.fillStyle = '#0c0908';
       g.beginPath(); g.arc(cx, cy, 18, 0, Math.PI * 2); g.fill();
-      g.strokeStyle = '#5c1f0a'; g.lineWidth = 3;
-      g.stroke();
+      g.strokeStyle = '#5c1f0a'; g.lineWidth = 3; g.stroke();
       g.fillStyle = '#dc2626';
       g.beginPath(); g.arc(cx, cy, 5, 0, Math.PI * 2); g.fill();
       g.fillStyle = '#090909';
       g.beginPath(); g.arc(cx, cy, 2, 0, Math.PI * 2); g.fill();
-
       return new THREE.CanvasTexture(c);
     }
     const obitoMaskTex = createObitoMaskTexture();
@@ -1507,7 +1498,6 @@
       return flower;
     }
 
-    // Mọi phụ kiện gắn theo tâm đầu (0, 1.54, 0) của nhân vật (hướng mặt là -Z)
     function buildAccessoryMesh(hatId) {
       const g = new THREE.Group();
 
@@ -1548,7 +1538,6 @@
         g.add(h);
 
       } else if (hatId === 'furina') {
-        // Nón chóp xanh Furina nghiêng sang chảnh + vương miện vàng + ngọc giọt nước + dải lông vũ trắng
         const h = new THREE.Group();
         h.position.set(0.04, 0.19, 0.0);
         h.rotation.z = -0.18;
@@ -1560,19 +1549,13 @@
         const goldMat = new THREE.MeshStandardMaterial({ color: 0xdcc296, roughness: 0.28, metalness: 0.68 });
         const gemMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0ea5e9, emissiveIntensity: 0.5, roughness: 0.15 });
 
-        // Vành mũ xanh đậm + viền trắng
         const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.41, 0.045, 24), blueDark);
         brim.position.y = 0.01; h.add(brim);
-
-        // Chóp mũ cao hơi loe ở đỉnh
         const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.285, 0.235, 0.33, 24), blueMain);
         crown.position.y = 0.18; h.add(crown);
-
-        // Dải ruy-băng trắng quanh chân mũ
         const band = new THREE.Mesh(new THREE.CylinderGeometry(0.252, 0.242, 0.042, 24), whiteMat);
         band.position.y = 0.085; h.add(band);
 
-        // Vòng vương miện vàng & giọt nước xanh quanh đỉnh mũ
         const rimRing = new THREE.Mesh(new THREE.TorusGeometry(0.282, 0.016, 10, 28), goldMat);
         rimRing.rotation.x = Math.PI / 2; rimRing.position.y = 0.33; h.add(rimRing);
 
@@ -1583,23 +1566,18 @@
           sp.position.set(Math.cos(a) * r, 0.33, Math.sin(a) * r);
           sp.rotation.y = -a + Math.PI / 2;
 
-          // Mũi vương miện nhọn + vòng tròn vàng trên đỉnh
           const diamond = new THREE.Mesh(new THREE.ConeGeometry(0.042, 0.15, 4), goldMat);
           diamond.position.y = 0.05; sp.add(diamond);
           const loop = new THREE.Mesh(new THREE.TorusGeometry(0.036, 0.011, 8, 14), goldMat);
           loop.position.y = 0.135; sp.add(loop);
           const pearl = new THREE.Mesh(new THREE.SphereGeometry(0.024, 10, 8), goldMat);
           pearl.position.y = 0.18; sp.add(pearl);
-
-          // Giọt nước pha lê xanh xen kẽ
           const gem = new THREE.Mesh(new THREE.SphereGeometry(0.026, 10, 8), gemMat);
-          gem.scale.set(0.85, 1.35, 0.65);
-          gem.position.set(0.085, -0.06, 0.015);
+          gem.scale.set(0.85, 1.35, 0.65); gem.position.set(0.085, -0.06, 0.015);
           sp.add(gem);
           h.add(sp);
         }
 
-        // Nơ xanh & dải lông vũ trắng rủ xuống bên hông mũ
         const bowGroup = new THREE.Group();
         bowGroup.position.set(-0.30, 0.07, -0.05);
         bowGroup.rotation.y = -Math.PI / 2;
@@ -1611,7 +1589,6 @@
         bowGem.scale.set(0.9, 1.3, 0.8); bowGem.position.z = 0.025;
         bowGroup.add(bowL, bowR, bowGem);
 
-        // Chùm lông vũ trắng rủ xuống mềm mại
         for (let k = 0; k < 5; k++) {
           const feather = new THREE.Mesh(new THREE.SphereGeometry(0.055 - k * 0.008, 10, 8), whiteMat);
           feather.scale.set(0.95, 1.35, 0.35);
@@ -1623,28 +1600,24 @@
         g.add(h);
 
       } else if (hatId === 'obito') {
-        // Mặt nạ xoắn ốc cam Obito ôm sát phía trước mặt (-Z)
         const maskGeo = new THREE.SphereGeometry(0.228, 28, 22, 0, Math.PI, 0, Math.PI);
         const maskMat = new THREE.MeshStandardMaterial({
           map: obitoMaskTex, roughness: 0.28, metalness: 0.08, side: THREE.DoubleSide
         });
         const mask = new THREE.Mesh(maskGeo, maskMat);
-        mask.rotation.y = Math.PI; // Quay mặt trước ra hướng -Z
+        mask.rotation.y = Math.PI;
         mask.scale.set(0.98, 1.13, 0.68);
         mask.position.set(0, 0.0, -0.075);
         g.add(mask);
 
-        // Dây đeo đen vòng ra sau đầu
         const strap = new THREE.Mesh(
           new THREE.TorusGeometry(0.205, 0.012, 8, 24),
           new THREE.MeshStandardMaterial({ color: 0x161618, roughness: 0.8 })
         );
         strap.rotation.x = Math.PI / 2;
-        strap.position.set(0, 0.01, 0.0);
         g.add(strap);
 
       } else if (hatId === 'mahoraga') {
-        // Vòng Pháp Luân 8 nan vàng ánh kim lơ lửng phía trên đầu (tự xoay)
         const wheelHolder = new THREE.Group();
         wheelHolder.position.set(0, 0.44, 0.05);
         wheelHolder.rotation.x = Math.PI / 2 - 0.18;
@@ -1654,11 +1627,8 @@
           color: 0xd4c372, roughness: 0.28, metalness: 0.72, emissive: 0x332b08, emissiveIntensity: 0.35
         });
 
-        const outerRing = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.025, 12, 32), goldMat);
-        wheel.add(outerRing);
-
-        const hub = new THREE.Mesh(new THREE.SphereGeometry(0.072, 14, 12), goldMat);
-        wheel.add(hub);
+        wheel.add(new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.025, 12, 32), goldMat));
+        wheel.add(new THREE.Mesh(new THREE.SphereGeometry(0.072, 14, 12), goldMat));
 
         for (let i = 0; i < 8; i++) {
           const ang = (i / 8) * Math.PI * 2;
@@ -1677,14 +1647,12 @@
         g.userData.spinWheel = wheel;
 
       } else if (hatId === 'gojo') {
-        // Khăn bịt mắt đen Gojo
         const clothMat = new THREE.MeshStandardMaterial({ color: 0x16181f, roughness: 0.85, metalness: 0.05 });
         const blindfold = new THREE.Mesh(new THREE.CylinderGeometry(0.228, 0.220, 0.148, 24), clothMat);
         blindfold.scale.set(0.97, 1.0, 0.99);
         blindfold.position.set(0, 0.035, 0);
         g.add(blindfold);
 
-        // Mái tóc trắng ánh xanh băng dựng nhọn nhiều lớp
         const hairMat = new THREE.MeshStandardMaterial({
           color: 0xe6f6ff, emissive: 0x183d54, emissiveIntensity: 0.28, roughness: 0.48
         });
@@ -1695,7 +1663,6 @@
         hairCap.position.set(0, 0.04, 0);
         g.add(hairCap);
 
-        // Lớp tóc dựng vành ngoài (12 chỏm nhọn tỏa lên)
         for (let i = 0; i < 12; i++) {
           const a = (i / 12) * Math.PI * 2;
           const hLen = 0.22 + (i % 3) * 0.045;
@@ -1705,7 +1672,6 @@
           spike.rotation.x = Math.sin(a) * 0.52;
           g.add(spike);
         }
-        // Lớp tóc dựng đỉnh đầu (7 chỏm cao vút)
         for (let i = 0; i < 7; i++) {
           const a = (i / 7) * Math.PI * 2 + 0.3;
           const hLen = 0.27 + (i % 2) * 0.05;
@@ -1715,7 +1681,6 @@
           spike.rotation.x = Math.sin(a) * 0.24;
           g.add(spike);
         }
-        // Chỏm đỉnh trung tâm
         const centerSpike = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.31, 7), hairMat);
         centerSpike.position.set(0, 0.33, -0.01);
         centerSpike.rotation.x = -0.12;
@@ -1816,7 +1781,7 @@
       let spinWheel = null;
       if (hatId && hatId !== 'none') {
         const acc = buildAccessoryMesh(hatId);
-        acc.position.set(0, 1.54, 0); // Neo đúng tâm đầu
+        acc.position.set(0, 1.54, 0);
         body.grp.add(acc);
         if (acc.userData.spinWheel) spinWheel = acc.userData.spinWheel;
       }
@@ -1842,7 +1807,8 @@
       return root;
     }
 
-    function createNameTagSprite(text, colorHex = '#ffffff') {
+    // Bảng tên gọn hơn, hòa sương mù (fog: true) & tự dọn bộ nhớ để không lòi xuyên tường
+    function createNameTagSprite(text, colorHex = '#ffffff', scaleW = 1.48, scaleH = 0.34) {
       const c = document.createElement('canvas'); c.width = 290; c.height = 64;
       const g = c.getContext('2d');
       g.fillStyle = 'rgba(0, 0, 0, 0.74)'; g.fillRect(6, 10, 278, 44);
@@ -1852,9 +1818,23 @@
       g.fillText(text, 145, 33);
 
       const tex = new THREE.CanvasTexture(c);
-      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
-      sp.scale.set(2.1, 0.47, 1); sp.position.y = 2.52;
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: tex,
+        transparent: true,
+        depthWrite: false,
+        fog: true
+      }));
+      sp.scale.set(scaleW, scaleH, 1);
+      sp.position.y = 2.48;
       return sp;
+    }
+
+    function disposeNameTag(sp) {
+      if (!sp) return;
+      if (sp.material) {
+        if (sp.material.map) sp.material.map.dispose();
+        sp.material.dispose();
+      }
     }
 
     // =========================================================================
@@ -2097,8 +2077,8 @@
       jailRing.rotation.x = -Math.PI / 2; jailRing.position.set(cx, 0.04, cx);
       worldGroup.add(jailRing);
 
-      const jailSign = createNameTagSprite('⛓️ LỒNG GIAM ⛓️', '#f0da75');
-      jailSign.scale.set(3.4, 0.82, 1); jailSign.position.set(cx, 2.65, cx);
+      const jailSign = createNameTagSprite('⛓️ LỒNG GIAM ⛓️', '#f0da75', 3.0, 0.72);
+      jailSign.position.set(cx, 2.65, cx);
       worldGroup.add(jailSign);
 
       cageBarsGroup = new THREE.Group();
@@ -2164,7 +2144,10 @@
       const needRebuild = !existing || existing.skin !== p.skin || existing.hat !== p.hat || existing.role !== p.role;
 
       if (needRebuild) {
-        if (existing) scene.remove(existing.mesh);
+        if (existing) {
+          disposeNameTag(existing.nameTag);
+          scene.remove(existing.mesh);
+        }
         const charMesh = buildCharacterMesh(getSkinInfo(p.skin).hex, p.hat, p.role === 'seeker', p.role === 'hider');
         scene.add(charMesh);
         playerMeshes[p.id] = { mesh: charMesh, skin: p.skin, hat: p.hat, role: p.role, tagKey: '', nameTag: null };
@@ -2176,7 +2159,10 @@
       const tagKey = `${p.status}|${lockSec}|${blindSec}|${p.grace ? 1 : 0}`;
       if (entry.tagKey !== tagKey) {
         entry.tagKey = tagKey;
-        if (entry.nameTag) entry.mesh.remove(entry.nameTag);
+        if (entry.nameTag) {
+          entry.mesh.remove(entry.nameTag);
+          disposeNameTag(entry.nameTag);
+        }
         let label = p.name, color = '#ffffff';
         if (p.role === 'seeker') {
           label = blindSec > 0 ? `[⚡ CHÓI ${blindSec}s] ${p.name}` : `[BẮT] ${p.name}`;
@@ -2188,6 +2174,7 @@
           label = `[MIỄN NHIỄM] ${p.name}`; color = '#38bdf8';
         }
         entry.nameTag = createNameTagSprite(label, color);
+        entry.nameTag.visible = false; // Mặc định ẩn, chỉ hiện khi kiểm tra tầm nhìn thẳng hợp lệ
         entry.mesh.add(entry.nameTag);
       }
 
@@ -2760,7 +2747,11 @@
         if (!isHost) computeMapNavigationData(activeMapGrid);
         rebuildBackroomsWorld3D(activeMapGrid);
 
-        for (const id in playerMeshes) { scene.remove(playerMeshes[id].mesh); delete playerMeshes[id]; }
+        for (const id in playerMeshes) {
+          disposeNameTag(playerMeshes[id].nameTag);
+          scene.remove(playerMeshes[id].mesh);
+          delete playerMeshes[id];
+        }
         for (const id in groundItemMeshes) { scene.remove(groundItemMeshes[id]); delete groundItemMeshes[id]; }
         for (const id in smoothPlayers) delete smoothPlayers[id];
 
@@ -3038,12 +3029,13 @@
     });
 
     // =========================================================================
-    // 8. ĐIỀU KHIỂN GÓC NHÌN THỨ NHẤT (ÁP DỤNG ĐỘ NHẠY TÙY CHỈNH)
+    // 8. ĐIỀU KHIỂN GÓC NHÌN THỨ NHẤT (CHỐNG LỖI QUAY NGƯỢC 180° TRÊN PC)
     // =========================================================================
     const keys = {};
     let camYaw = 0, camPitch = 0;
     let joystickVec = { dx: 0, dy: 0 };
     let isTouchDevice = false;
+    let pointerLockGraceUntil = 0;
 
     function detectTouchControls() {
       const isIPad = /iPad/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -3064,10 +3056,21 @@
       pcLockHint.classList.toggle('hidden', !show);
     }
 
+    function requestGamePointerLock() {
+      try {
+        const res = gameCanvas.requestPointerLock({ unadjustedMovement: true });
+        if (res && typeof res.catch === 'function') {
+          res.catch(() => { try { gameCanvas.requestPointerLock(); } catch (e) {} });
+        }
+      } catch (e) {
+        try { gameCanvas.requestPointerLock?.(); } catch (err) {}
+      }
+    }
+
     gameCanvas.addEventListener('click', () => {
       const modalOpen = !endOverlay.classList.contains('hidden') || !settingsOverlay.classList.contains('hidden');
       if (!isTouchDevice && gameScreen.classList.contains('active') && !modalOpen) {
-        gameCanvas.requestPointerLock?.();
+        requestGamePointerLock();
       }
     });
     gameCanvas.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -3077,7 +3080,13 @@
         sendUseFlashlight();
       }
     });
-    document.addEventListener('pointerlockchange', updateLockHint);
+    document.addEventListener('pointerlockchange', () => {
+      if (document.pointerLockElement === gameCanvas) {
+        // Bỏ qua 90ms đầu ngay lúc khóa chuột để chặn cú nhảy tâm chuột của trình duyệt
+        pointerLockGraceUntil = performance.now() + 90;
+      }
+      updateLockHint();
+    });
 
     window.addEventListener('blur', () => {
       for (const k in keys) keys[k] = false;
@@ -3085,11 +3094,21 @@
     });
 
     window.addEventListener('mousemove', (e) => {
-      if (document.pointerLockElement === gameCanvas) {
-        const ySign = userSettings.invertY ? -1 : 1;
-        camYaw -= e.movementX * 0.0024 * userSettings.mouseSens;
-        camPitch = Math.max(-1.05, Math.min(1.05, camPitch - e.movementY * 0.0022 * userSettings.mouseSens * ySign));
-      }
+      if (document.pointerLockElement !== gameCanvas) return;
+      if (performance.now() < pointerLockGraceUntil) return;
+
+      const mx = e.movementX || 0;
+      const my = e.movementY || 0;
+
+      // Chặn triệt để lỗi PointerLock bắn giá trị nhảy vọt trên Chrome/Edge Windows gây quay ngược 180 độ
+      if (Math.abs(mx) > 220 || Math.abs(my) > 220) return;
+
+      const clampedX = Math.max(-110, Math.min(110, mx));
+      const clampedY = Math.max(-110, Math.min(110, my));
+      const ySign = userSettings.invertY ? -1 : 1;
+
+      camYaw -= clampedX * 0.0024 * userSettings.mouseSens;
+      camPitch = Math.max(-1.05, Math.min(1.05, camPitch - clampedY * 0.0022 * userSettings.mouseSens * ySign));
     });
 
     function buildActionSnapshot() {
@@ -3167,7 +3186,6 @@
     joystickZone.addEventListener('touchend', releaseJoystick);
     joystickZone.addEventListener('touchcancel', releaseJoystick);
 
-    // Vuốt xoay góc nhìn 360° nhân theo độ nhạy người dùng cài đặt
     let lookTouchId = null, lastLookX = 0, lastLookY = 0;
     gameCanvas.addEventListener('touchstart', (e) => {
       e.preventDefault();
@@ -3467,6 +3485,8 @@
 
       const smoothAlpha = 1 - Math.exp(-14 * dt);
       const activeIds = new Set();
+      const viewerX = localPlayer.initialized ? localPlayer.x : (meObj ? meObj.x : 0);
+      const viewerY = localPlayer.initialized ? localPlayer.y : (meObj ? meObj.y : 0);
 
       renderPlayers.forEach(p => {
         activeIds.add(p.id);
@@ -3495,14 +3515,32 @@
           entry.mesh.rotation.y = sp.yaw;
           const ud = entry.mesh.userData;
 
-          // Xoay nhẹ Vòng Mahoraga trên đầu người chơi đang trang bị
           if (ud.spinWheel) ud.spinWheel.rotation.z += dt * 1.1;
 
           const showXrayForThis = seekerXrayPulseOn && p.role === 'hider' && p.status === 'alive';
           if (ud.xrayGroup) ud.xrayGroup.visible = showXrayForThis;
+
+          // Chỉ hiện bảng tên khi thực sự nhìn thấy trực tiếp (không bị tường che và trong tầm nhìn)
           if (entry.nameTag) {
-            entry.nameTag.material.depthTest = !showXrayForThis;
-            entry.nameTag.renderOrder = showXrayForThis ? 1000 : 0;
+            if (showXrayForThis) {
+              entry.nameTag.visible = true;
+              entry.nameTag.material.depthTest = false;
+              if (entry.nameTag.material.fog !== false) {
+                entry.nameTag.material.fog = false;
+                entry.nameTag.material.needsUpdate = true;
+              }
+              entry.nameTag.renderOrder = 1000;
+            } else {
+              const distToMe = Math.hypot(sp.x - viewerX, sp.y - viewerY);
+              const canSee = distToMe < 310 && hasLineOfSight(viewerX, viewerY, sp.x, sp.y);
+              entry.nameTag.visible = canSee;
+              entry.nameTag.material.depthTest = true;
+              if (entry.nameTag.material.fog !== true) {
+                entry.nameTag.material.fog = true;
+                entry.nameTag.material.needsUpdate = true;
+              }
+              entry.nameTag.renderOrder = 0;
+            }
           }
 
           if (p.moving) {
@@ -3518,7 +3556,11 @@
       });
 
       for (const id in playerMeshes) {
-        if (!activeIds.has(id)) { scene.remove(playerMeshes[id].mesh); delete playerMeshes[id]; }
+        if (!activeIds.has(id)) {
+          disposeNameTag(playerMeshes[id].nameTag);
+          scene.remove(playerMeshes[id].mesh);
+          delete playerMeshes[id];
+        }
       }
 
       if (localPlayer.initialized && meObj) {
