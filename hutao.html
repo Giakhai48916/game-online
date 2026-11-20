@@ -1,0 +1,2872 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>THE BACKROOMS 3D: Sinh Tồn 20 Người & Đèn Pin</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #121007;
+      color: #f3ead3;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      touch-action: none;
+    }
+
+    .screen {
+      display: none;
+      width: 100vw;
+      height: 100dvh;
+      position: relative;
+      overflow-y: auto;
+    }
+
+    .screen.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #menu-screen, #lobby-screen {
+      background: radial-gradient(circle at center, #3b3518 0%, #121007 85%);
+      padding: 14px;
+    }
+
+    .panel {
+      width: 100%;
+      max-width: 485px;
+      background: rgba(22, 19, 9, 0.95);
+      border: 2px solid #c7b152;
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 0 0 38px rgba(214, 190, 82, 0.22);
+      margin: auto;
+    }
+
+    .title {
+      text-align: center;
+      font-size: 1.65rem;
+      letter-spacing: 3px;
+      color: #f0da75;
+      text-shadow: 0 0 12px rgba(240, 218, 117, 0.45);
+    }
+
+    .subtitle {
+      text-align: center;
+      font-size: 0.74rem;
+      letter-spacing: 1.8px;
+      color: #b5a66b;
+      margin-bottom: 14px;
+    }
+
+    /* Tủ trang phục 3D */
+    .wardrobe-box {
+      display: flex;
+      gap: 12px;
+      background: #1b180b;
+      border: 1px solid #594f23;
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 12px;
+      align-items: center;
+    }
+
+    #preview-3d-canvas {
+      width: 132px;
+      height: 152px;
+      border-radius: 8px;
+      background: radial-gradient(circle at center, #3f4669 0%, #191c2b 100%);
+      border: 1px solid #6b5e29;
+      flex-shrink: 0;
+      cursor: grab;
+    }
+
+    .wardrobe-controls { flex: 1; min-width: 0; }
+
+    .w-label {
+      font-size: 0.74rem;
+      color: #d6c57a;
+      margin-bottom: 6px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .skin-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-bottom: 10px;
+    }
+
+    .skin-dot {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      cursor: pointer;
+      transition: transform 0.12s, border-color 0.12s;
+    }
+
+    .skin-dot.selected {
+      border-color: #f0da75;
+      transform: scale(1.18);
+      box-shadow: 0 0 8px rgba(240, 218, 117, 0.8);
+    }
+
+    .hat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .hat-btn {
+      padding: 6px;
+      font-size: 0.74rem;
+      background: #282311;
+      color: #dfd4a6;
+      border: 1px solid #5e5324;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .hat-btn.selected {
+      background: #e3c852;
+      color: #171408;
+      border-color: #fff2b2;
+    }
+
+    .input-group { margin-bottom: 12px; }
+    .input-group label { display: block; font-size: 0.82rem; margin-bottom: 5px; color: #dcd09a; }
+
+    input {
+      width: 100%;
+      padding: 10px 12px;
+      background: #231f0f;
+      border: 1px solid #8a7b39;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 0.96rem;
+      outline: none;
+      user-select: text;
+      -webkit-user-select: text;
+    }
+    input:focus { border-color: #f0da75; }
+
+    .btn {
+      width: 100%;
+      padding: 11px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.96rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.15s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+    .btn-primary { background: #e3c852; color: #171408; }
+    .btn-secondary { background: #463f1e; color: #f7e699; border: 1px solid #a89545; }
+    .btn-small {
+      padding: 6px 10px;
+      background: #3d3618;
+      color: #f0da75;
+      border: 1px solid #8a7b39;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+
+    .divider { text-align: center; margin: 13px 0; position: relative; }
+    .divider span {
+      background: #161309;
+      padding: 0 10px;
+      font-size: 0.72rem;
+      color: #9e8f53;
+      position: relative;
+      z-index: 1;
+    }
+    .divider::before {
+      content: '';
+      position: absolute;
+      top: 50%; left: 0; right: 0;
+      height: 1px; background: #4f4621;
+    }
+
+    .join-row { display: flex; gap: 8px; }
+    .join-row input { text-transform: uppercase; text-align: center; letter-spacing: 2px; font-weight: bold; }
+    .join-row .btn { width: 46%; }
+
+    .error-text { color: #ff6b6b; font-size: 0.84rem; text-align: center; margin-top: 8px; min-height: 18px; }
+    .hint-text { text-align: center; color: #bdb077; font-size: 0.86rem; margin-top: 8px; }
+
+    /* Lobby */
+    .room-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #24200f;
+      padding: 9px 14px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #6b5e29;
+    }
+    .room-header strong { font-size: 1.45rem; letter-spacing: 4px; color: #f0da75; }
+
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #1d1a0d;
+      border: 1px solid #594f23;
+      border-radius: 9px;
+      padding: 8px 12px;
+      margin-bottom: 10px;
+      font-size: 0.84rem;
+    }
+    .dur-controls { display: flex; align-items: center; gap: 8px; }
+    .dur-controls strong { min-width: 72px; text-align: center; color: #f0da75; font-size: 0.95rem; }
+
+    .player-list-box {
+      background: #1d1a0d;
+      border: 1px solid #4a411d;
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 10px;
+      max-height: 145px;
+      overflow-y: auto;
+    }
+    .player-list-box h3 { font-size: 0.84rem; color: #d6c57a; margin-bottom: 6px; }
+    #player-list { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+    #player-list li {
+      background: #2b2613;
+      padding: 6px 10px;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+    }
+    .p-meta { display: flex; align-items: center; gap: 7px; }
+    .p-swatch { width: 13px; height: 13px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.5); }
+    .host-badge { color: #f0da75; font-size: 0.73rem; font-weight: bold; }
+    .bot-badge { color: #8bf2ea; font-size: 0.73rem; font-weight: bold; }
+
+    .lobby-actions { display: flex; gap: 8px; margin-bottom: 10px; }
+
+    .rules-mini {
+      font-size: 0.76rem;
+      line-height: 1.45;
+      color: #cfc491;
+      background: rgba(227, 200, 82, 0.08);
+      padding: 8px 10px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+
+    /* Màn hình Game 3D */
+    #game-screen { display: none; background: #0d0c06; overflow: hidden; }
+    #game-screen.active { display: block; }
+    #game-canvas { display: block; width: 100%; height: 100%; }
+
+    #crosshair {
+      position: fixed;
+      top: 50%; left: 50%;
+      width: 8px; height: 8px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.78);
+      border: 1.5px solid rgba(0, 0, 0, 0.65);
+      pointer-events: none;
+      z-index: 8;
+    }
+
+    #blind-overlay {
+      position: fixed;
+      inset: 0;
+      background: #ffffff;
+      z-index: 25;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.12s linear;
+    }
+    #blind-overlay .blind-text {
+      color: #4a3f12;
+      font-size: 1.45rem;
+      font-weight: 900;
+      letter-spacing: 2px;
+      text-shadow: 0 0 12px rgba(255, 255, 255, 0.9);
+    }
+    #blind-overlay .blind-sub {
+      color: #7c2d12;
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-top: 6px;
+    }
+
+    #caught-vignette {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 7;
+      box-shadow: inset 0 0 85px rgba(255, 145, 0, 0.8);
+      animation: pulseVignette 0.9s infinite alternate;
+    }
+    #xray-vignette {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 7;
+      box-shadow: inset 0 0 95px rgba(220, 20, 40, 0.78);
+      animation: pulseVignette 0.55s infinite alternate;
+    }
+    @keyframes pulseVignette {
+      from { opacity: 0.42; }
+      to { opacity: 0.95; }
+    }
+
+    #hud {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      z-index: 12;
+      pointer-events: none;
+      max-width: 62vw;
+    }
+    .hud-row { display: flex; gap: 6px; flex-wrap: wrap; }
+    .hud-box {
+      background: rgba(18, 16, 8, 0.84);
+      border: 1px solid #a89545;
+      padding: 5px 10px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #f5e6a3;
+    }
+    .hud-timer { font-size: 0.94rem; color: #fff; background: rgba(45, 38, 12, 0.94); }
+    .hud-timer.final-min {
+      background: rgba(165, 16, 26, 0.92);
+      border-color: #ff6b6b;
+      color: #fff;
+    }
+
+    #hud-xray-badge {
+      background: rgba(90, 18, 25, 0.9);
+      border-color: #f87171;
+      color: #fecaca;
+    }
+    #hud-xray-badge.active-pulse {
+      background: rgba(220, 24, 42, 0.96);
+      border-color: #fff;
+      color: #fff;
+      box-shadow: 0 0 14px rgba(255, 65, 65, 0.95);
+    }
+
+    #hud-item-badge {
+      background: rgba(56, 46, 8, 0.92);
+      border-color: #facc15;
+      color: #fef08a;
+    }
+    #hud-item-badge.has-item {
+      background: rgba(202, 138, 4, 0.95);
+      color: #141206;
+      border-color: #fef9c3;
+      box-shadow: 0 0 12px rgba(250, 204, 21, 0.7);
+    }
+
+    #minimap-canvas {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      width: 126px;
+      height: 126px;
+      border-radius: 10px;
+      border: 2px solid #c7b152;
+      background: rgba(15, 13, 6, 0.86);
+      z-index: 12;
+      pointer-events: none;
+    }
+
+    #pc-lock-hint {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, 34px);
+      background: rgba(16, 14, 6, 0.88);
+      border: 1px solid #c7b152;
+      color: #f0da75;
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-size: 0.81rem;
+      z-index: 11;
+      pointer-events: none;
+      text-align: center;
+    }
+
+    #toast-container {
+      position: fixed;
+      top: 90px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      z-index: 15;
+      pointer-events: none;
+      width: 88%;
+      max-width: 470px;
+      align-items: center;
+    }
+    .toast {
+      background: rgba(20, 18, 10, 0.93);
+      border-left: 4px solid #e3c852;
+      color: #fff;
+      padding: 7px 14px;
+      border-radius: 6px;
+      font-size: 0.83rem;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
+    .toast.warning { border-left-color: #ff9f1c; }
+    .toast.danger { border-left-color: #ff4757; }
+    .toast.success { border-left-color: #2ecc71; }
+
+    #action-prompts {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      z-index: 14;
+      pointer-events: none;
+    }
+    .prompt-pill {
+      padding: 9px 18px;
+      border-radius: 999px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: #fff;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5);
+    }
+    #rescue-prompt { background: rgba(22, 163, 74, 0.95); }
+    #flash-prompt { background: rgba(202, 138, 4, 0.95); color: #171408; }
+
+    /* Điều khiển cảm ứng Điện thoại */
+    #mobile-controls {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 20;
+    }
+    #joystick-zone {
+      position: fixed;
+      bottom: 22px;
+      left: 20px;
+      width: 144px;
+      height: 144px;
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #joystick-base {
+      width: 116px;
+      height: 116px;
+      border-radius: 50%;
+      background: rgba(240, 218, 117, 0.16);
+      border: 2px solid rgba(240, 218, 117, 0.45);
+      position: relative;
+    }
+    #joystick-knob {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: rgba(240, 218, 117, 0.85);
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+    }
+    #btn-mobile-rescue {
+      position: fixed;
+      bottom: 26px;
+      right: 20px;
+      width: 84px;
+      height: 84px;
+      border-radius: 50%;
+      border: 3px solid #dcfce7;
+      background: radial-gradient(circle, #22c55e 0%, #15803d 100%);
+      color: #fff;
+      font-size: 1.25rem;
+      font-weight: 900;
+      pointer-events: auto;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
+      opacity: 0.45;
+      transition: transform 0.08s, opacity 0.15s, box-shadow 0.15s;
+    }
+    #btn-mobile-rescue.ready { opacity: 1; box-shadow: 0 0 26px rgba(34, 197, 94, 0.95); }
+    #btn-mobile-rescue:active { transform: scale(0.92); }
+
+    #btn-mobile-flash {
+      position: fixed;
+      bottom: 122px;
+      right: 24px;
+      width: 78px;
+      height: 78px;
+      border-radius: 50%;
+      border: 3px solid #fef9c3;
+      background: radial-gradient(circle, #fde047 0%, #ca8a04 100%);
+      color: #171408;
+      font-size: 0.95rem;
+      font-weight: 900;
+      pointer-events: auto;
+      box-shadow: 0 0 24px rgba(250, 204, 21, 0.92);
+      transition: transform 0.08s;
+      line-height: 1.15;
+    }
+    #btn-mobile-flash:active { transform: scale(0.9); }
+
+    #mobile-look-hint {
+      position: fixed;
+      bottom: 210px;
+      right: 16px;
+      font-size: 0.7rem;
+      color: rgba(240, 218, 117, 0.72);
+      background: rgba(0, 0, 0, 0.45);
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 9, 4, 0.82);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 35;
+      padding: 14px;
+    }
+
+    .results-list {
+      list-style: none;
+      margin: 12px 0 16px;
+      max-height: 225px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      text-align: left;
+    }
+    .results-list li {
+      background: #24200f;
+      border: 1px solid #4d431e;
+      padding: 8px 10px;
+      border-radius: 7px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.84rem;
+    }
+    .res-win { color: #4ade80; font-weight: 700; }
+    .res-lose { color: #ff6b6b; font-weight: 700; }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <!-- MÀN HÌNH CHÍNH & TỦ TRANG PHỤC -->
+  <div id="menu-screen" class="screen active">
+    <div class="panel">
+      <h1 class="title">THE BACKROOMS 3D</h1>
+      <p class="subtitle">MÊ CUNG NGẪU NHIÊN 35&times;35 &bull; TỐI ĐA 20 NGƯỜI &bull; ĐÈN PIN CHÓI</p>
+
+      <div class="wardrobe-box">
+        <canvas id="preview-3d-canvas" width="264" height="304"></canvas>
+        <div class="wardrobe-controls">
+          <div class="w-label">Màu Skin Nhân Vật</div>
+          <div id="menu-skin-grid" class="skin-grid"></div>
+
+          <div class="w-label">Chọn Nón (Đội / Bỏ)</div>
+          <div id="menu-hat-grid" class="hat-grid"></div>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label for="player-name">Tên nhân vật của bạn</label>
+        <input id="player-name" type="text" maxlength="14" placeholder="Nhập tên (VD: Minh)..." autocomplete="off" />
+      </div>
+
+      <button id="btn-create" class="btn btn-primary">Tạo Phòng Mới</button>
+
+      <div class="divider"><span>HOẶC VÀO PHÒNG BẠN BÈ</span></div>
+
+      <div class="join-row">
+        <input id="room-code-input" type="text" maxlength="4" placeholder="Mã phòng" autocomplete="off" />
+        <button id="btn-join" class="btn btn-secondary">Vào Phòng</button>
+      </div>
+
+      <p id="menu-error" class="error-text"></p>
+    </div>
+  </div>
+
+  <!-- MÀN HÌNH SẢNH CHỜ -->
+  <div id="lobby-screen" class="screen">
+    <div class="panel">
+      <div class="room-header">
+        <span>MÃ PHÒNG:</span>
+        <strong id="lobby-room-code">----</strong>
+        <button id="btn-copy-code" class="btn-small">Sao chép</button>
+      </div>
+
+      <div class="setting-row">
+        <span>⏳ Thời gian sống sót:</span>
+        <div class="dur-controls">
+          <button id="btn-dur-minus" class="btn-small hidden">-30s</button>
+          <strong id="duration-display">03:00</strong>
+          <button id="btn-dur-plus" class="btn-small hidden">+30s</button>
+        </div>
+      </div>
+
+      <div class="wardrobe-box" style="padding:8px; margin-bottom:10px;">
+        <div class="wardrobe-controls">
+          <div class="w-label">Trang phục của bạn</div>
+          <div id="lobby-skin-grid" class="skin-grid" style="margin-bottom:7px;"></div>
+          <div id="lobby-hat-grid" class="hat-grid"></div>
+        </div>
+      </div>
+
+      <div class="player-list-box">
+        <h3>Người chơi trong phòng (<span id="player-count">0</span>/20)</h3>
+        <ul id="player-list"></ul>
+      </div>
+
+      <div id="host-bot-controls" class="lobby-actions hidden">
+        <button id="btn-add-bot" class="btn btn-secondary" style="padding:8px; font-size:0.84rem;">+ Thêm Bot (Test)</button>
+        <button id="btn-clear-bots" class="btn btn-secondary" style="padding:8px; font-size:0.84rem; width:40%;">Xóa Bot</button>
+      </div>
+
+      <div class="rules-mini">
+        <b>Luật chơi:</b> Map 35&times;35 tạo ngẫu nhiên mỗi ván. Bị bắt sẽ vào <b>Lồng Giam</b> khóa cứu <b>30s</b>. Nhặt <b>🔦 Đèn Pin</b> (tối đa 3 cây trên map, mỗi người giữ 1 cây) chiếu làm <b>chói trắng Người Bắt 5s</b> (không thể bắt ai). Còn <b>1 phút cuối</b>, Thấu Thị nháy <b>2s mỗi 10s</b> và bị bắt sẽ thua ngay!
+      </div>
+
+      <button id="btn-start-game" class="btn btn-primary hidden">Bắt Đầu Game (3D FPS)</button>
+      <p id="waiting-host-text" class="hint-text">Đang chờ chủ phòng bắt đầu...</p>
+      <p id="lobby-error" class="error-text"></p>
+    </div>
+  </div>
+
+  <!-- MÀN HÌNH GAMEPLAY 3D -->
+  <div id="game-screen" class="screen">
+    <canvas id="game-canvas"></canvas>
+    <div id="crosshair"></div>
+    <div id="caught-vignette" class="hidden"></div>
+    <div id="xray-vignette" class="hidden"></div>
+
+    <div id="blind-overlay">
+      <div class="blind-text">⚡ BỊ CHÓI ĐÈN PIN! ⚡</div>
+      <div class="blind-sub" id="blind-countdown">Không thể bắt người trong 5.0s</div>
+    </div>
+
+    <div id="hud">
+      <div class="hud-row">
+        <div class="hud-box hud-timer" id="hud-timer">00:00</div>
+        <div class="hud-box" id="hud-role">Vai trò: ---</div>
+      </div>
+      <div class="hud-row">
+        <div class="hud-box" id="hud-stats">Sống: 0 | Giam: 0 | Loại: 0</div>
+        <div class="hud-box hidden" id="hud-item-badge">🔦 Trống</div>
+        <div class="hud-box hidden" id="hud-xray-badge">👁️ Thấu Thị</div>
+      </div>
+    </div>
+
+    <canvas id="minimap-canvas" width="140" height="140"></canvas>
+    <div id="pc-lock-hint" class="hidden">Click màn hình để xoay 360° (WASD đi &bull; F / Chuột phải: Đèn Pin &bull; E: Cứu &bull; ESC mở chuột)</div>
+    <div id="toast-container"></div>
+
+    <div id="action-prompts">
+      <div id="rescue-prompt" class="prompt-pill hidden">Nhấn SPACE / E để CỨU!</div>
+      <div id="flash-prompt" class="prompt-pill hidden">🔦 Nhấn F / Chuột Phải chiếu ĐÈN PIN!</div>
+    </div>
+
+    <div id="mobile-controls" class="hidden">
+      <div id="joystick-zone">
+        <div id="joystick-base">
+          <div id="joystick-knob"></div>
+        </div>
+      </div>
+      <div id="mobile-look-hint">Vuốt phải để xoay góc nhìn</div>
+      <button id="btn-mobile-flash" type="button" class="hidden">🔦<br>ĐÈN</button>
+      <button id="btn-mobile-rescue" type="button">CỨU</button>
+    </div>
+
+    <!-- Bảng kết thúc ván -->
+    <div id="end-overlay" class="overlay hidden">
+      <div class="panel" style="text-align:center;">
+        <h2 id="end-personal-title" style="font-size:1.55rem; margin-bottom:6px;">KẾT THÚC VÁN</h2>
+        <p id="end-personal-sub" style="font-size:0.88rem; color:#d6c57a; margin-bottom:10px;"></p>
+        <ul id="end-results-list" class="results-list"></ul>
+        <button id="btn-back-lobby" class="btn btn-primary hidden">Về Sảnh Chờ</button>
+        <p id="end-wait-host" class="hint-text">Đang chờ chủ phòng mở ván mới...</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 1. CẤU HÌNH CHUNG & DANH SÁCH TRANG PHỤC (SKIN + NÓN)
+    // =========================================================================
+    const MAX_PLAYERS = 20;
+    const MAP_SIZE = 35;
+    const CENTER_TILE = 17;
+    const TILE_SIZE = 64;
+    const WORLD_SCALE = 4 / TILE_SIZE;
+    const PLAYER_RADIUS = 15;
+
+    const PREP_DURATION = 15;
+    const JAIL_LOCK_SECONDS = 30;
+    const FINAL_MINUTE_SEC = 60;
+    const XRAY_ON_SEC = 2;
+    const XRAY_OFF_SEC = 10;
+    const XRAY_CYCLE_SEC = XRAY_ON_SEC + XRAY_OFF_SEC;
+
+    const MAX_ITEMS_TOTAL = 3;
+    const BLIND_DURATION = 5;
+    const FLASH_RANGE = 290;
+    const FLASH_HALF_ANGLE = 0.58;
+
+    const SEEKER_SPEED = 236;
+    const HIDER_SPEED = 206;
+    const ROOM_PREFIX = 'br35v3-';
+
+    const SKINS = [
+      { id: 'white',  name: 'Trắng Gốc',  hex: 0xf1f3f8, css: '#f1f3f8' },
+      { id: 'black',  name: 'Đen Huyền',  hex: 0x262933, css: '#262933' },
+      { id: 'cyan',   name: 'Xanh Neon',  hex: 0x22d3ee, css: '#22d3ee' },
+      { id: 'yellow', name: 'Vàng Bảo Hộ',hex: 0xfacc15, css: '#facc15' },
+      { id: 'purple', name: 'Tím Mộng',   hex: 0xa855f7, css: '#a855f7' },
+      { id: 'pink',   name: 'Hồng Đào',   hex: 0xf472b6, css: '#f472b6' },
+      { id: 'green',  name: 'Xanh Lá',    hex: 0x34d399, css: '#34d399' }
+    ];
+
+    const HATS = [
+      { id: 'none',   name: 'Không đội' },
+      { id: 'hutao',  name: 'Nón Hoa Mai' },
+      { id: 'helmet', name: 'Mũ Bảo Hộ' },
+      { id: 'crown',  name: 'Vương Miện' }
+    ];
+
+    let myCosmetics = { skin: 'white', hat: 'hutao' };
+    function getSkinInfo(id) { return SKINS.find(s => s.id === id) || SKINS[0]; }
+    function formatClock(sec) {
+      const s = Math.max(0, Math.ceil(sec));
+      return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+    }
+
+    // Bộ đếm nhịp bằng Web Worker để Tab 1 (Chủ phòng) KHÔNG bị trình duyệt bóp FPS khi chuyển sang Tab 2
+    function createBackgroundSafeLoop(callback, intervalMs) {
+      try {
+        const code = `let t=null; self.onmessage=e=>{ if(e.data==='start'){ clearInterval(t); t=setInterval(()=>self.postMessage(1), ${intervalMs}); } else if(e.data==='stop'){ clearInterval(t); } };`;
+        const blob = new Blob([code], { type: 'application/javascript' });
+        const url = URL.createObjectURL(blob);
+        const worker = new Worker(url);
+        worker.onmessage = () => callback();
+        worker.postMessage('start');
+        return {
+          stop() {
+            worker.postMessage('stop');
+            worker.terminate();
+            URL.revokeObjectURL(url);
+          }
+        };
+      } catch (err) {
+        const id = setInterval(callback, intervalMs);
+        return { stop() { clearInterval(id); } };
+      }
+    }
+
+    // =========================================================================
+    // 2. SINH BẢN ĐỒ THE BACKROOMS NGẪU NHIÊN 35x35 + BFS KIỂM TRA THÔNG ĐƯỜNG
+    // =========================================================================
+    let activeMapGrid = [];
+    let flowToCenter = [];
+    let validFloorTiles = [];
+    let validHiderSpawns = [];
+
+    function generateRandomBackroomsMap() {
+      const N = MAP_SIZE;
+      const g = Array.from({ length: N }, () => Array(N).fill(1));
+
+      const dirs = [[-2, 0], [2, 0], [0, -2], [0, 2]];
+      const stack = [{ r: 1, c: 1 }];
+      g[1][1] = 0;
+
+      while (stack.length > 0) {
+        const cur = stack[stack.length - 1];
+        const shuffled = dirs.slice().sort(() => Math.random() - 0.5);
+        let carved = false;
+        for (const [dr, dc] of shuffled) {
+          const nr = cur.r + dr, nc = cur.c + dc;
+          if (nr > 0 && nr < N - 1 && nc > 0 && nc < N - 1 && g[nr][nc] === 1) {
+            g[cur.r + dr / 2][cur.c + dc / 2] = 0;
+            g[nr][nc] = 0;
+            stack.push({ r: nr, c: nc });
+            carved = true;
+            break;
+          }
+        }
+        if (!carved) stack.pop();
+      }
+
+      for (let k = 0; k < 8; k++) {
+        const rr = 2 + Math.floor(Math.random() * (N - 6));
+        const cc = 2 + Math.floor(Math.random() * (N - 6));
+        if (Math.abs(rr - CENTER_TILE) < 6 && Math.abs(cc - CENTER_TILE) < 6) continue;
+        for (let r = rr; r < rr + 3; r++) {
+          for (let c = cc; c < cc + 3; c++) g[r][c] = 0;
+        }
+      }
+
+      for (let r = 2; r < N - 2; r++) {
+        for (let c = 2; c < N - 2; c++) {
+          if (g[r][c] === 1) {
+            const horiz = g[r][c - 1] === 0 && g[r][c + 1] === 0;
+            const vert = g[r - 1][c] === 0 && g[r + 1][c] === 0;
+            if ((horiz || vert) && Math.random() < 0.22) g[r][c] = 0;
+          }
+        }
+      }
+
+      for (let r = CENTER_TILE - 3; r <= CENTER_TILE + 3; r++) {
+        for (let c = CENTER_TILE - 3; c <= CENTER_TILE + 3; c++) g[r][c] = 0;
+      }
+      for (let r = CENTER_TILE - 2; r <= CENTER_TILE + 2; r++) {
+        for (let c = CENTER_TILE - 2; c <= CENTER_TILE + 2; c++) {
+          const isEdgeR = (r === CENTER_TILE - 2 || r === CENTER_TILE + 2);
+          const isEdgeC = (c === CENTER_TILE - 2 || c === CENTER_TILE + 2);
+          if (isEdgeR && isEdgeC) g[r][c] = 1;
+          else if (isEdgeR || isEdgeC) g[r][c] = 3;
+          else g[r][c] = 2;
+        }
+      }
+
+      for (let i = 0; i < N; i++) {
+        g[0][i] = 1; g[N - 1][i] = 1; g[i][0] = 1; g[i][N - 1] = 1;
+      }
+
+      const visited = Array.from({ length: N }, () => Array(N).fill(false));
+      const q = [{ r: CENTER_TILE, c: CENTER_TILE }];
+      visited[CENTER_TILE][CENTER_TILE] = true;
+      const d4 = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+      while (q.length > 0) {
+        const cur = q.shift();
+        for (const [dr, dc] of d4) {
+          const nr = cur.r + dr, nc = cur.c + dc;
+          if (nr >= 0 && nr < N && nc >= 0 && nc < N && !visited[nr][nc] && g[nr][nc] !== 1) {
+            visited[nr][nc] = true;
+            q.push({ r: nr, c: nc });
+          }
+        }
+      }
+      for (let r = 0; r < N; r++) {
+        for (let c = 0; c < N; c++) {
+          if (g[r][c] !== 1 && !visited[r][c]) g[r][c] = 1;
+        }
+      }
+      return g;
+    }
+
+    function encodeMapGrid(grid) { return grid.map(row => row.join('')); }
+    function decodeMapGrid(rows) { return rows.map(str => str.split('').map(Number)); }
+
+    function computeMapNavigationData(grid) {
+      const N = grid.length;
+      flowToCenter = Array.from({ length: N }, () => Array(N).fill(null));
+      const visited = Array.from({ length: N }, () => Array(N).fill(false));
+      const queue = [{ r: CENTER_TILE, c: CENTER_TILE }];
+      visited[CENTER_TILE][CENTER_TILE] = true;
+      flowToCenter[CENTER_TILE][CENTER_TILE] = { r: CENTER_TILE, c: CENTER_TILE };
+
+      const d4 = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+      while (queue.length > 0) {
+        const cur = queue.shift();
+        for (const [dr, dc] of d4) {
+          const nr = cur.r + dr, nc = cur.c + dc;
+          if (nr >= 0 && nr < N && nc >= 0 && nc < N && !visited[nr][nc] && grid[nr][nc] !== 1) {
+            visited[nr][nc] = true;
+            flowToCenter[nr][nc] = { r: cur.r, c: cur.c };
+            queue.push({ r: nr, c: nc });
+          }
+        }
+      }
+
+      validFloorTiles = [];
+      validHiderSpawns = [];
+      for (let r = 1; r < N - 1; r++) {
+        for (let c = 1; c < N - 1; c++) {
+          if (grid[r][c] === 0) {
+            const distFromCenter = Math.hypot(r - CENTER_TILE, c - CENTER_TILE);
+            if (distFromCenter >= 5) validFloorTiles.push({ r, c });
+            if (distFromCenter >= 9) validHiderSpawns.push({ r, c });
+          }
+        }
+      }
+    }
+
+    function isSolidTileForPlayer(r, c, phase, player) {
+      const N = activeMapGrid.length;
+      if (N === 0 || r < 0 || r >= N || c < 0 || c >= N) return true;
+      const t = activeMapGrid[r][c];
+      if (t === 1) return true;
+      if (t === 3 && (phase === 'prep' || player.status === 'jailed')) return true;
+      return false;
+    }
+
+    function collidesWithMap(x, y, radius, phase, player) {
+      const minC = Math.floor((x - radius) / TILE_SIZE);
+      const maxC = Math.floor((x + radius) / TILE_SIZE);
+      const minR = Math.floor((y - radius) / TILE_SIZE);
+      const maxR = Math.floor((y + radius) / TILE_SIZE);
+      for (let r = minR; r <= maxR; r++) {
+        for (let c = minC; c <= maxC; c++) {
+          if (isSolidTileForPlayer(r, c, phase, player)) {
+            const left = c * TILE_SIZE, right = left + TILE_SIZE;
+            const top = r * TILE_SIZE, bottom = top + TILE_SIZE;
+            const cx = Math.max(left, Math.min(x, right));
+            const cy = Math.max(top, Math.min(y, bottom));
+            if ((x - cx) ** 2 + (y - cy) ** 2 < radius * radius) return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    function moveWithCollision(player, vx, vy, dt, phase) {
+      const nx = player.x + vx * dt;
+      if (!collidesWithMap(nx, player.y, PLAYER_RADIUS, phase, player)) player.x = nx;
+      const ny = player.y + vy * dt;
+      if (!collidesWithMap(player.x, ny, PLAYER_RADIUS, phase, player)) player.y = ny;
+    }
+
+    function hasLineOfSight(x1, y1, x2, y2) {
+      const dist = Math.hypot(x2 - x1, y2 - y1);
+      const steps = Math.ceil(dist / 12);
+      for (let i = 1; i < steps; i++) {
+        const t = i / steps;
+        const px = x1 + (x2 - x1) * t;
+        const py = y1 + (y2 - y1) * t;
+        const r = Math.floor(py / TILE_SIZE);
+        const c = Math.floor(px / TILE_SIZE);
+        if (r < 0 || r >= activeMapGrid.length || c < 0 || c >= activeMapGrid.length) return false;
+        if (activeMapGrid[r][c] === 1) return false;
+      }
+      return true;
+    }
+
+    function isInRescueZone(x, y) {
+      const min = (CENTER_TILE - 3.3) * TILE_SIZE;
+      const max = (CENTER_TILE + 4.3) * TILE_SIZE;
+      return x >= min && x <= max && y >= min && y <= max;
+    }
+
+    function generateRoomCode() {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let code = '';
+      for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)];
+      return code;
+    }
+
+    // =========================================================================
+    // 3. MÔ HÌNH 3D NHÂN VẬT, NÓN HOA MAI, ĐÈN PIN & BÓNG THẤU THỊ
+    // =========================================================================
+    function createTalismanTexture() {
+      const c = document.createElement('canvas');
+      c.width = 128; c.height = 160;
+      const g = c.getContext('2d');
+      g.fillStyle = '#ece6c5'; g.strokeStyle = '#c8bf94'; g.lineWidth = 4;
+      g.beginPath();
+      g.moveTo(64, 8); g.lineTo(118, 52); g.lineTo(106, 152); g.lineTo(22, 152); g.lineTo(10, 52);
+      g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = '#1b1d22';
+      g.beginPath();
+      g.moveTo(68, 30); g.bezierCurveTo(50, 56, 86, 70, 74, 96);
+      g.bezierCurveTo(64, 114, 62, 126, 66, 140); g.bezierCurveTo(50, 120, 42, 102, 52, 84);
+      g.bezierCurveTo(62, 66, 42, 52, 68, 30); g.fill();
+      g.strokeStyle = '#1b1d22'; g.lineWidth = 8; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(46, 82); g.quadraticCurveTo(32, 92, 52, 108); g.stroke();
+      g.beginPath(); g.moveTo(78, 74); g.quadraticCurveTo(96, 86, 76, 106); g.stroke();
+      return new THREE.CanvasTexture(c);
+    }
+    const talismanTex = createTalismanTexture();
+
+    function createPlumBlossom(scale = 1) {
+      const flower = new THREE.Group();
+      const petalMat = new THREE.MeshStandardMaterial({ color: 0xd93829, roughness: 0.45 });
+      const centerMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.3, emissive: 0x4a3b00 });
+      for (let i = 0; i < 5; i++) {
+        const ang = (i / 5) * Math.PI * 2;
+        const petal = new THREE.Mesh(new THREE.SphereGeometry(0.055 * scale, 10, 8), petalMat);
+        petal.scale.set(1, 1, 0.38);
+        petal.position.set(Math.cos(ang) * 0.065 * scale, Math.sin(ang) * 0.065 * scale, 0);
+        flower.add(petal);
+      }
+      const core = new THREE.Mesh(new THREE.SphereGeometry(0.032 * scale, 8, 8), centerMat);
+      core.position.z = 0.015 * scale;
+      flower.add(core);
+      return flower;
+    }
+
+    function buildHatMesh(hatId) {
+      const g = new THREE.Group();
+      if (hatId === 'hutao') {
+        const darkMat = new THREE.MeshStandardMaterial({ color: 0x22262d, roughness: 0.55, metalness: 0.12 });
+        const brimMat = new THREE.MeshStandardMaterial({ color: 0x2b313a, roughness: 0.5, metalness: 0.15 });
+        const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.46, 0.10, 24), brimMat);
+        brim.position.y = 0.02; g.add(brim);
+        const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.31, 0.33, 0.21, 24), darkMat);
+        crown.position.y = 0.16; g.add(crown);
+        const topDome = new THREE.Mesh(new THREE.SphereGeometry(0.31, 24, 12, 0, Math.PI * 2, 0, Math.PI * 0.35), darkMat);
+        topDome.scale.set(1, 0.32, 1); topDome.position.y = 0.24; g.add(topDome);
+
+        const talisman = new THREE.Mesh(
+          new THREE.PlaneGeometry(0.24, 0.30),
+          new THREE.MeshStandardMaterial({ map: talismanTex, transparent: true, alphaTest: 0.2, side: THREE.DoubleSide, roughness: 0.5 })
+        );
+        talisman.position.set(0, 0.19, -0.345); talisman.rotation.x = -0.14; talisman.rotation.y = Math.PI;
+        g.add(talisman);
+
+        const twig = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.012, 0.015, 0.28, 8),
+          new THREE.MeshStandardMaterial({ color: 0x5c3a21, roughness: 0.7 })
+        );
+        twig.position.set(-0.33, 0.20, -0.05); twig.rotation.z = 0.35; g.add(twig);
+
+        [
+          { pos: [-0.35, 0.24, -0.04], rotY: -Math.PI / 2, sc: 1.05 },
+          { pos: [-0.30, 0.14, -0.18], rotY: -Math.PI * 0.65, sc: 0.92 },
+          { pos: [-0.36, 0.10, -0.02], rotY: -Math.PI / 2, sc: 0.78 },
+          { pos: [-0.23, 0.11, -0.27], rotY: -Math.PI * 0.78, sc: 0.48 }
+        ].forEach(f => {
+          const fl = createPlumBlossom(f.sc);
+          fl.position.set(...f.pos); fl.rotation.y = f.rotY; g.add(fl);
+        });
+      } else if (hatId === 'helmet') {
+        const yMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.35, metalness: 0.1 });
+        const dome = new THREE.Mesh(new THREE.SphereGeometry(0.29, 20, 14, 0, Math.PI * 2, 0, Math.PI * 0.55), yMat);
+        dome.position.y = 0.02; g.add(dome);
+        const visor = new THREE.Mesh(new THREE.CylinderGeometry(0.30, 0.33, 0.04, 20), yMat);
+        visor.position.set(0, 0.03, -0.05); g.add(visor);
+        const lamp = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.04, 12), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+        lamp.rotation.x = Math.PI / 2; lamp.position.set(0, 0.13, -0.28); g.add(lamp);
+      } else if (hatId === 'crown') {
+        const goldMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, roughness: 0.25, metalness: 0.75 });
+        const base = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.19, 0.14, 16), goldMat);
+        base.position.y = 0.08; g.add(base);
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2;
+          const spike = new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.14, 6), goldMat);
+          spike.position.set(Math.cos(a) * 0.18, 0.20, Math.sin(a) * 0.18); g.add(spike);
+        }
+      }
+      return g;
+    }
+
+    function createFlashlightMesh(scale = 1) {
+      const g = new THREE.Group();
+      const bodyMat = new THREE.MeshStandardMaterial({ color: 0x27272a, roughness: 0.35, metalness: 0.65 });
+      const headMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.3, metalness: 0.4 });
+      const lensMat = new THREE.MeshBasicMaterial({ color: 0xfffef0 });
+
+      const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.065 * scale, 0.06 * scale, 0.46 * scale, 12), bodyMat);
+      handle.rotation.x = Math.PI / 2; g.add(handle);
+      const head = new THREE.Mesh(new THREE.CylinderGeometry(0.11 * scale, 0.075 * scale, 0.16 * scale, 14), headMat);
+      head.rotation.x = Math.PI / 2; head.position.z = -0.28 * scale; g.add(head);
+      const lens = new THREE.Mesh(new THREE.CircleGeometry(0.095 * scale, 14), lensMat);
+      lens.position.z = -0.365 * scale; lens.rotation.y = Math.PI; g.add(lens);
+      return g;
+    }
+
+    function createRoundedLimb(rTop, rBot, len, mat, renderOrder = 0) {
+      const g = new THREE.Group();
+      const cyl = new THREE.Mesh(new THREE.CylinderGeometry(rTop, rBot, len, 12), mat);
+      const cap1 = new THREE.Mesh(new THREE.SphereGeometry(rTop, 12, 8), mat);
+      cap1.position.y = len / 2;
+      const cap2 = new THREE.Mesh(new THREE.SphereGeometry(rBot, 12, 8), mat);
+      cap2.position.y = -len / 2;
+      if (renderOrder) { cyl.renderOrder = cap1.renderOrder = cap2.renderOrder = renderOrder; }
+      g.add(cyl, cap1, cap2);
+      return g;
+    }
+
+    const xraySilhouetteMat = new THREE.MeshBasicMaterial({
+      color: 0xff263b, transparent: true, opacity: 0.56, depthTest: false, depthWrite: false
+    });
+
+    function buildBodyParts(mat, renderOrder = 0) {
+      const grp = new THREE.Group();
+      const torso = createRoundedLimb(0.22, 0.20, 0.48, mat, renderOrder);
+      torso.scale.set(1.0, 1.0, 0.72); torso.position.y = 0.96; grp.add(torso);
+      const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.12, 0.14, 10), mat);
+      neck.position.y = 1.32; if (renderOrder) neck.renderOrder = renderOrder; grp.add(neck);
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.215, 16, 14), mat);
+      head.scale.set(0.95, 1.08, 0.95); head.position.y = 1.54; if (renderOrder) head.renderOrder = renderOrder; grp.add(head);
+
+      const leftArm = createRoundedLimb(0.085, 0.095, 0.56, mat, renderOrder);
+      leftArm.position.set(-0.42, 1.24, 0); leftArm.rotation.z = 1.12; grp.add(leftArm);
+      const rightArm = createRoundedLimb(0.085, 0.095, 0.56, mat, renderOrder);
+      rightArm.position.set(0.42, 1.24, 0); rightArm.rotation.z = -1.12; grp.add(rightArm);
+
+      const leftLeg = createRoundedLimb(0.115, 0.09, 0.62, mat, renderOrder);
+      leftLeg.position.set(-0.22, 0.40, 0); leftLeg.rotation.z = -0.44; grp.add(leftLeg);
+      const rightLeg = createRoundedLimb(0.115, 0.09, 0.62, mat, renderOrder);
+      rightLeg.position.set(0.22, 0.40, 0); rightLeg.rotation.z = 0.44; grp.add(rightLeg);
+      return { grp, leftLeg, rightLeg };
+    }
+
+    function buildCharacterMesh(skinHex, hatId, isSeeker, includeXray = false) {
+      const root = new THREE.Group();
+      const bodyColor = isSeeker ? 0xdc2626 : skinHex;
+      const mat = new THREE.MeshStandardMaterial({
+        color: bodyColor, roughness: 0.42, metalness: 0.06,
+        emissive: isSeeker ? 0x3b0505 : 0x000000
+      });
+
+      const body = buildBodyParts(mat, 0);
+      root.add(body.grp);
+
+      if (hatId && hatId !== 'none') {
+        const hat = buildHatMesh(hatId);
+        hat.position.set(0, 1.71, 0);
+        body.grp.add(hat);
+      }
+
+      let handItem = null;
+      if (!isSeeker) {
+        handItem = createFlashlightMesh(0.85);
+        handItem.position.set(0.56, 1.32, -0.15);
+        handItem.visible = false;
+        body.grp.add(handItem);
+      }
+
+      let xrayGroup = null;
+      if (includeXray) {
+        const xr = buildBodyParts(xraySilhouetteMat, 998);
+        xrayGroup = xr.grp;
+        xrayGroup.scale.set(1.06, 1.03, 1.06);
+        xrayGroup.visible = false;
+        body.grp.add(xrayGroup);
+      }
+
+      root.userData = { bodyGroup: body.grp, leftLeg: body.leftLeg, rightLeg: body.rightLeg, xrayGroup, handItem };
+      return root;
+    }
+
+    function createNameTagSprite(text, colorHex = '#ffffff') {
+      const c = document.createElement('canvas');
+      c.width = 290; c.height = 64;
+      const g = c.getContext('2d');
+      g.fillStyle = 'rgba(0, 0, 0, 0.74)';
+      g.fillRect(6, 10, 278, 44);
+      g.strokeStyle = colorHex; g.lineWidth = 3;
+      g.strokeRect(6, 10, 278, 44);
+      g.fillStyle = colorHex;
+      g.font = 'bold 21px Segoe UI';
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText(text, 145, 33);
+
+      const tex = new THREE.CanvasTexture(c);
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
+      sp.scale.set(2.1, 0.47, 1);
+      sp.position.y = 2.38;
+      return sp;
+    }
+
+    // =========================================================================
+    // 4. XEM TRƯỚC 3D TRONG TỦ TRANG PHỤC
+    // =========================================================================
+    const previewCanvas = document.getElementById('preview-3d-canvas');
+    const previewRenderer = new THREE.WebGLRenderer({ canvas: previewCanvas, alpha: true, antialias: true });
+    previewRenderer.setSize(132, 152, false);
+    const previewScene = new THREE.Scene();
+    const previewCamera = new THREE.PerspectiveCamera(40, 132 / 152, 0.1, 20);
+    previewCamera.position.set(0, 1.25, 3.6);
+    previewCamera.lookAt(0, 1.08, 0);
+
+    previewScene.add(new THREE.AmbientLight(0xffffff, 0.72));
+    const pDir = new THREE.DirectionalLight(0xfff5e0, 0.9);
+    pDir.position.set(2, 4, 3); previewScene.add(pDir);
+    const pFill = new THREE.DirectionalLight(0x9ec5ff, 0.35);
+    pFill.position.set(-2, 1, -2); previewScene.add(pFill);
+
+    let previewChar = null;
+    let previewAngle = Math.PI - 0.35;
+
+    function refreshPreviewModel() {
+      if (previewChar) previewScene.remove(previewChar);
+      previewChar = buildCharacterMesh(getSkinInfo(myCosmetics.skin).hex, myCosmetics.hat, false, false);
+      previewChar.rotation.y = previewAngle;
+      previewScene.add(previewChar);
+    }
+
+    let dragPreview = false, lastPx = 0;
+    previewCanvas.addEventListener('pointerdown', (e) => { dragPreview = true; lastPx = e.clientX; });
+    window.addEventListener('pointerup', () => { dragPreview = false; });
+    window.addEventListener('pointermove', (e) => {
+      if (!dragPreview) return;
+      previewAngle += (e.clientX - lastPx) * 0.015;
+      lastPx = e.clientX;
+    });
+
+    function renderWardrobeUI() {
+      ['menu-skin-grid', 'lobby-skin-grid'].forEach(gid => {
+        const box = document.getElementById(gid);
+        box.innerHTML = '';
+        SKINS.forEach(s => {
+          const btn = document.createElement('button');
+          btn.type = 'button'; btn.title = s.name;
+          btn.className = 'skin-dot' + (myCosmetics.skin === s.id ? ' selected' : '');
+          btn.style.backgroundColor = s.css;
+          btn.addEventListener('click', () => {
+            myCosmetics.skin = s.id;
+            renderWardrobeUI(); refreshPreviewModel(); syncMyCosmeticsToRoom();
+          });
+          box.appendChild(btn);
+        });
+      });
+
+      ['menu-hat-grid', 'lobby-hat-grid'].forEach(gid => {
+        const box = document.getElementById(gid);
+        box.innerHTML = '';
+        HATS.forEach(h => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'hat-btn' + (myCosmetics.hat === h.id ? ' selected' : '');
+          btn.textContent = h.name;
+          btn.addEventListener('click', () => {
+            myCosmetics.hat = h.id;
+            renderWardrobeUI(); refreshPreviewModel(); syncMyCosmeticsToRoom();
+          });
+          box.appendChild(btn);
+        });
+      });
+    }
+    renderWardrobeUI();
+    refreshPreviewModel();
+
+    // =========================================================================
+    // 5. HỆ THỐNG ĐỒ HỌA 3D THẾ GIỚI
+    // =========================================================================
+    const gameCanvas = document.getElementById('game-canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas: gameCanvas, antialias: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x1b1809);
+    scene.fog = new THREE.FogExp2(0x1b1809, 0.042);
+
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 70);
+    camera.rotation.order = 'YXZ';
+    scene.add(camera);
+
+    const fpFlashlight = createFlashlightMesh(0.75);
+    fpFlashlight.position.set(0.36, -0.30, -0.58);
+    fpFlashlight.rotation.set(0.06, -0.14, 0);
+    fpFlashlight.visible = false;
+    camera.add(fpFlashlight);
+
+    const ambientLight = new THREE.AmbientLight(0xfff1c2, 0.72);
+    scene.add(ambientLight);
+    scene.add(new THREE.HemisphereLight(0xfff6d1, 0x4d431b, 0.45));
+
+    const playerFlashLight = new THREE.PointLight(0xfff2c6, 0.75, 18);
+    scene.add(playerFlashLight);
+
+    const centerLight = new THREE.PointLight(0xffdf6b, 1.4, 24);
+    centerLight.position.set((CENTER_TILE + 0.5) * 4, 3.0, (CENTER_TILE + 0.5) * 4);
+    scene.add(centerLight);
+
+    function createBackroomsWallTexture() {
+      const c = document.createElement('canvas'); c.width = 256; c.height = 256;
+      const g = c.getContext('2d');
+      g.fillStyle = '#d8c56a'; g.fillRect(0, 0, 256, 256);
+      g.fillStyle = '#c5b054';
+      for (let x = 0; x < 256; x += 24) {
+        g.fillRect(x, 0, 8, 256);
+        g.fillStyle = '#cbb75c';
+        for (let y = 16; y < 256; y += 32) {
+          g.beginPath(); g.moveTo(x + 16, y - 7); g.lineTo(x + 20, y); g.lineTo(x + 16, y + 7); g.lineTo(x + 12, y); g.closePath(); g.fill();
+        }
+        g.fillStyle = '#c5b054';
+      }
+      g.fillStyle = 'rgba(72, 60, 18, 0.14)'; g.fillRect(0, 185, 256, 55);
+      g.fillStyle = '#52441b'; g.fillRect(0, 236, 256, 20);
+      g.fillStyle = '#736129'; g.fillRect(0, 0, 256, 8);
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      return tex;
+    }
+
+    function createCarpetTexture() {
+      const c = document.createElement('canvas'); c.width = 256; c.height = 256;
+      const g = c.getContext('2d');
+      g.fillStyle = '#9b8b47'; g.fillRect(0, 0, 256, 256);
+      for (let i = 0; i < 1600; i++) {
+        g.fillStyle = Math.random() > 0.5 ? 'rgba(65,55,18,0.2)' : 'rgba(218,200,118,0.13)';
+        g.fillRect(Math.random() * 256, Math.random() * 256, 3, 3);
+      }
+      g.fillStyle = 'rgba(55,48,16,0.15)'; g.beginPath(); g.arc(90, 130, 52, 0, Math.PI * 2); g.fill();
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(MAP_SIZE, MAP_SIZE);
+      return tex;
+    }
+
+    function createCeilingTexture() {
+      const c = document.createElement('canvas'); c.width = 256; c.height = 256;
+      const g = c.getContext('2d');
+      g.fillStyle = '#c4ba87'; g.fillRect(0, 0, 256, 256);
+      g.strokeStyle = '#7d7550'; g.lineWidth = 4;
+      g.strokeRect(2, 2, 124, 124); g.strokeRect(130, 2, 124, 124);
+      g.strokeRect(2, 130, 124, 124); g.strokeRect(130, 130, 124, 124);
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(MAP_SIZE, MAP_SIZE);
+      return tex;
+    }
+
+    const sharedWallMat = new THREE.MeshStandardMaterial({ map: createBackroomsWallTexture(), roughness: 0.85 });
+    const sharedFloorMat = new THREE.MeshStandardMaterial({ map: createCarpetTexture(), roughness: 0.92 });
+    const sharedCeilMat = new THREE.MeshStandardMaterial({ map: createCeilingTexture(), roughness: 0.85 });
+
+    let worldGroup = null, cageBarsGroup = null, cageBarMat = null, jailRing = null;
+
+    const minimapBaseCanvas = document.createElement('canvas');
+    minimapBaseCanvas.width = 140; minimapBaseCanvas.height = 140;
+
+    function rebuildMinimapBase(grid) {
+      const N = grid.length, cell = minimapBaseCanvas.width / N;
+      const g = minimapBaseCanvas.getContext('2d');
+      g.clearRect(0, 0, 140, 140);
+      for (let r = 0; r < N; r++) {
+        for (let c = 0; c < N; c++) {
+          const t = grid[r][c];
+          if (t === 1) g.fillStyle = '#5c5228';
+          else if (t === 2) g.fillStyle = '#e3c852';
+          else g.fillStyle = '#1f1c0e';
+          g.fillRect(c * cell, r * cell, cell + 0.35, cell + 0.35);
+        }
+      }
+    }
+
+    function rebuildBackroomsWorld3D(grid) {
+      if (worldGroup) scene.remove(worldGroup);
+      worldGroup = new THREE.Group();
+      scene.add(worldGroup);
+
+      const N = grid.length, worldW = N * 4, wallH = 3.6;
+
+      const floor = new THREE.Mesh(new THREE.PlaneGeometry(worldW, worldW), sharedFloorMat);
+      floor.rotation.x = -Math.PI / 2; floor.position.set(worldW / 2, 0, worldW / 2);
+      worldGroup.add(floor);
+
+      const ceil = new THREE.Mesh(new THREE.PlaneGeometry(worldW, worldW), sharedCeilMat);
+      ceil.rotation.x = Math.PI / 2; ceil.position.set(worldW / 2, wallH, worldW / 2);
+      worldGroup.add(ceil);
+
+      const wallPositions = [], lampPositions = [], gatePositions = [];
+      for (let r = 0; r < N; r++) {
+        for (let c = 0; c < N; c++) {
+          const t = grid[r][c], wx = (c + 0.5) * 4, wz = (r + 0.5) * 4;
+          if (t === 1) wallPositions.push([wx, wz]);
+          else {
+            if (r % 2 === 1 && c % 2 === 1) lampPositions.push([wx, wz]);
+            if (t === 3) gatePositions.push([wx, wz]);
+          }
+        }
+      }
+
+      const dummy = new THREE.Object3D();
+      const wallInst = new THREE.InstancedMesh(new THREE.BoxGeometry(4, wallH, 4), sharedWallMat, wallPositions.length);
+      wallPositions.forEach(([wx, wz], i) => {
+        dummy.position.set(wx, wallH / 2, wz); dummy.updateMatrix(); wallInst.setMatrixAt(i, dummy.matrix);
+      });
+      wallInst.instanceMatrix.needsUpdate = true;
+      worldGroup.add(wallInst);
+
+      const lampInst = new THREE.InstancedMesh(
+        new THREE.BoxGeometry(1.7, 0.08, 0.55),
+        new THREE.MeshBasicMaterial({ color: 0xfffce0 }),
+        lampPositions.length
+      );
+      lampPositions.forEach(([wx, wz], i) => {
+        dummy.position.set(wx, wallH - 0.05, wz); dummy.updateMatrix(); lampInst.setMatrixAt(i, dummy.matrix);
+      });
+      lampInst.instanceMatrix.needsUpdate = true;
+      worldGroup.add(lampInst);
+
+      const cx = (CENTER_TILE + 0.5) * 4;
+      const centerFloor = new THREE.Mesh(
+        new THREE.PlaneGeometry(12, 12),
+        new THREE.MeshStandardMaterial({ color: 0x2d2b24, roughness: 0.78 })
+      );
+      centerFloor.rotation.x = -Math.PI / 2; centerFloor.position.set(cx, 0.02, cx);
+      worldGroup.add(centerFloor);
+
+      jailRing = new THREE.Mesh(
+        new THREE.RingGeometry(1.8, 2.3, 32),
+        new THREE.MeshBasicMaterial({ color: 0xf0da75, side: THREE.DoubleSide })
+      );
+      jailRing.rotation.x = -Math.PI / 2; jailRing.position.set(cx, 0.04, cx);
+      worldGroup.add(jailRing);
+
+      const jailSign = createNameTagSprite('⛓️ LỒNG GIAM ⛓️', '#f0da75');
+      jailSign.scale.set(3.4, 0.82, 1); jailSign.position.set(cx, 2.65, cx);
+      worldGroup.add(jailSign);
+
+      cageBarsGroup = new THREE.Group();
+      const barGeo = new THREE.CylinderGeometry(0.075, 0.075, wallH, 8);
+      cageBarMat = new THREE.MeshBasicMaterial({ color: 0xff4757, transparent: true, opacity: 0.82 });
+      gatePositions.forEach(([wx, wz]) => {
+        for (let offset = -1.2; offset <= 1.2; offset += 1.2) {
+          const b1 = new THREE.Mesh(barGeo, cageBarMat); b1.position.set(wx + offset, wallH / 2, wz); cageBarsGroup.add(b1);
+          const b2 = new THREE.Mesh(barGeo, cageBarMat); b2.position.set(wx, wallH / 2, wz + offset); cageBarsGroup.add(b2);
+        }
+      });
+      worldGroup.add(cageBarsGroup);
+      rebuildMinimapBase(grid);
+    }
+
+    const groundItemMeshes = {};
+    const activeFlashBeams = [];
+
+    function createGroundItemMesh() {
+      const grp = new THREE.Group();
+      const fl = createFlashlightMesh(1.55);
+      fl.position.y = 0.65; fl.rotation.x = 0.25; grp.add(fl);
+      const glowRing = new THREE.Mesh(
+        new THREE.RingGeometry(0.45, 0.68, 20),
+        new THREE.MeshBasicMaterial({ color: 0xfde047, side: THREE.DoubleSide, transparent: true, opacity: 0.82 })
+      );
+      glowRing.rotation.x = -Math.PI / 2; glowRing.position.y = 0.05; grp.add(glowRing);
+      const beam = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.18, 0.45, 1.8, 12, 1, true),
+        new THREE.MeshBasicMaterial({ color: 0xfef08a, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false })
+      );
+      beam.position.y = 0.9; grp.add(beam);
+      grp.userData = { fl };
+      return grp;
+    }
+
+    function spawnFlashBeamEffect(x, y, yaw) {
+      const length = FLASH_RANGE * WORLD_SCALE;
+      const radius = Math.tan(FLASH_HALF_ANGLE) * length * 0.72;
+      const geo = new THREE.ConeGeometry(radius, length, 20, 1, true);
+      geo.translate(0, -length / 2, 0);
+      geo.rotateX(-Math.PI / 2);
+
+      const mat = new THREE.MeshBasicMaterial({
+        color: 0xffffe8, transparent: true, opacity: 0.55,
+        side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending
+      });
+      const cone = new THREE.Mesh(geo, mat);
+      cone.position.set(x * WORLD_SCALE, 1.42, y * WORLD_SCALE);
+      cone.rotation.y = yaw;
+      scene.add(cone);
+
+      const light = new THREE.PointLight(0xffffff, 3.2, 22);
+      light.position.set((x - Math.sin(yaw) * 45) * WORLD_SCALE, 1.6, (y - Math.cos(yaw) * 45) * WORLD_SCALE);
+      scene.add(light);
+      activeFlashBeams.push({ mesh: cone, light, life: 0.65, maxLife: 0.65 });
+    }
+
+    const playerMeshes = {};
+
+    function syncPlayerMesh3D(p) {
+      const existing = playerMeshes[p.id];
+      const needRebuild = !existing || existing.skin !== p.skin || existing.hat !== p.hat || existing.role !== p.role;
+
+      if (needRebuild) {
+        if (existing) scene.remove(existing.mesh);
+        const charMesh = buildCharacterMesh(getSkinInfo(p.skin).hex, p.hat, p.role === 'seeker', p.role === 'hider');
+        scene.add(charMesh);
+        playerMeshes[p.id] = { mesh: charMesh, skin: p.skin, hat: p.hat, role: p.role, tagKey: '', nameTag: null };
+      }
+
+      const entry = playerMeshes[p.id];
+      const lockSec = p.status === 'jailed' ? Math.ceil(p.lockTimer || 0) : 0;
+      const blindSec = p.blindTimer > 0 ? Math.ceil(p.blindTimer) : 0;
+      const tagKey = `${p.status}|${lockSec}|${blindSec}|${p.grace ? 1 : 0}`;
+      if (entry.tagKey !== tagKey) {
+        entry.tagKey = tagKey;
+        if (entry.nameTag) entry.mesh.remove(entry.nameTag);
+        let label = p.name, color = '#ffffff';
+        if (p.role === 'seeker') {
+          label = blindSec > 0 ? `[⚡ CHÓI ${blindSec}s] ${p.name}` : `[BẮT] ${p.name}`;
+          color = blindSec > 0 ? '#fde047' : '#ff6b6b';
+        } else if (p.status === 'jailed') {
+          label = lockSec > 0 ? `[KHÓA ${lockSec}s] ${p.name}` : `[CỨU ĐƯỢC!] ${p.name}`;
+          color = lockSec > 0 ? '#ff9f1c' : '#4ade80';
+        } else if (p.grace) {
+          label = `[MIỄN NHIỄM] ${p.name}`; color = '#38bdf8';
+        }
+        entry.nameTag = createNameTagSprite(label, color);
+        entry.mesh.add(entry.nameTag);
+      }
+
+      if (entry.mesh.userData.handItem) {
+        entry.mesh.userData.handItem.visible = !!(p.hasItem && p.status === 'alive');
+      }
+      return entry;
+    }
+
+    // =========================================================================
+    // 6. MẠNG PEERJS + ĐỒNG BỘ MƯỢT 60FPS CHO MỌI TAB & THIẾT BỊ
+    // =========================================================================
+    const PEER_CONFIG = {
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+      }
+    };
+
+    let peer = null, isHost = false, myId = null, currentRoomCode = null;
+    let hostConn = null;
+    const guestConns = {};
+    let hostRoom = null, hostLoopHandle = null, botCounter = 0, itemUidCounter = 0;
+
+    let configuredDuration = 180;
+    let gamePhase = 'lobby', gameTimer = 0;
+    let isFinalMinute = false, xrayActive = false, xrayCountdown = 0;
+    let renderPlayers = [];
+    let renderItems = [];
+    const smoothPlayers = {};
+
+    // Vị trí cục bộ mượt 60fps của chính người chơi (fix hoàn toàn lỗi chạy tại chỗ ở Tab 2)
+    let localPlayer = { x: 0, y: 0, tpSeq: -1, initialized: false, moving: false };
+    let lastPosSendMs = 0;
+
+    // DOM Elements
+    const menuScreen = document.getElementById('menu-screen');
+    const lobbyScreen = document.getElementById('lobby-screen');
+    const gameScreen = document.getElementById('game-screen');
+    const nameInput = document.getElementById('player-name');
+    const roomCodeInput = document.getElementById('room-code-input');
+    const menuError = document.getElementById('menu-error');
+    const lobbyError = document.getElementById('lobby-error');
+    const btnCreate = document.getElementById('btn-create');
+    const btnJoin = document.getElementById('btn-join');
+    const lobbyCodeEl = document.getElementById('lobby-room-code');
+    const btnDurMinus = document.getElementById('btn-dur-minus');
+    const btnDurPlus = document.getElementById('btn-dur-plus');
+    const durationDisplay = document.getElementById('duration-display');
+    const playerCountEl = document.getElementById('player-count');
+    const playerListEl = document.getElementById('player-list');
+    const hostBotControls = document.getElementById('host-bot-controls');
+    const btnStartGame = document.getElementById('btn-start-game');
+    const waitingHostText = document.getElementById('waiting-host-text');
+    const hudRole = document.getElementById('hud-role');
+    const hudTimer = document.getElementById('hud-timer');
+    const hudStats = document.getElementById('hud-stats');
+    const hudItemBadge = document.getElementById('hud-item-badge');
+    const hudXrayBadge = document.getElementById('hud-xray-badge');
+    const blindOverlay = document.getElementById('blind-overlay');
+    const blindCountdown = document.getElementById('blind-countdown');
+    const caughtVignette = document.getElementById('caught-vignette');
+    const xrayVignette = document.getElementById('xray-vignette');
+    const pcLockHint = document.getElementById('pc-lock-hint');
+    const toastContainer = document.getElementById('toast-container');
+    const rescuePrompt = document.getElementById('rescue-prompt');
+    const flashPrompt = document.getElementById('flash-prompt');
+    const mobileControls = document.getElementById('mobile-controls');
+    const btnMobileRescue = document.getElementById('btn-mobile-rescue');
+    const btnMobileFlash = document.getElementById('btn-mobile-flash');
+    const endOverlay = document.getElementById('end-overlay');
+    const endPersonalTitle = document.getElementById('end-personal-title');
+    const endPersonalSub = document.getElementById('end-personal-sub');
+    const endResultsList = document.getElementById('end-results-list');
+    const btnBackLobby = document.getElementById('btn-back-lobby');
+    const endWaitHost = document.getElementById('end-wait-host');
+    const minimapCanvas = document.getElementById('minimap-canvas');
+    const mctx = minimapCanvas.getContext('2d');
+
+    function showScreen(sc) {
+      [menuScreen, lobbyScreen, gameScreen].forEach(s => s.classList.remove('active'));
+      sc.classList.add('active');
+      if (sc !== gameScreen && document.pointerLockElement) document.exitPointerLock();
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, m => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[m]));
+    }
+
+    function showToast(message, style = 'info') {
+      const el = document.createElement('div');
+      el.className = `toast ${style}`;
+      el.textContent = message;
+      toastContainer.appendChild(el);
+      setTimeout(() => el.remove(), 4400);
+    }
+
+    function createPlayerObj(id, name, cosmetics, isBot = false) {
+      return {
+        id,
+        name: (name || 'Người chơi').trim().slice(0, 14) || 'Người chơi',
+        skin: cosmetics?.skin || 'white',
+        hat: cosmetics?.hat || 'none',
+        isBot,
+        x: (CENTER_TILE + 0.5) * TILE_SIZE,
+        y: (CENTER_TILE + 0.5) * TILE_SIZE,
+        yaw: 0,
+        tpSeq: 0, // Tăng mỗi lần hồi sinh / vào lồng / được cứu để tránh đồng bộ ngược gói tin cũ
+        role: 'hider',
+        status: 'alive',
+        lockTimer: 0,
+        graceTimer: 0,
+        blindTimer: 0,
+        hasItem: false,
+        input: { dx: 0, dy: 0 },
+        moving: false,
+        botDir: { dx: 0, dy: 0 },
+        botThink: 0
+      };
+    }
+
+    function syncMyCosmeticsToRoom() {
+      if (isHost && hostRoom && hostRoom.players[myId]) {
+        hostRoom.players[myId].skin = myCosmetics.skin;
+        hostRoom.players[myId].hat = myCosmetics.hat;
+        if (hostRoom.phase === 'lobby') hostEmitLobby();
+      } else if (hostConn && hostConn.open) {
+        hostConn.send({ type: 'cosmetics', skin: myCosmetics.skin, hat: myCosmetics.hat });
+      }
+    }
+
+    function hostBroadcast(packet) {
+      handleClientPacket(packet);
+      for (const pid in guestConns) {
+        if (guestConns[pid] && guestConns[pid].open) guestConns[pid].send(packet);
+      }
+    }
+
+    function hostSendTo(pid, packet) {
+      if (pid === myId) handleClientPacket(packet);
+      else if (guestConns[pid] && guestConns[pid].open) guestConns[pid].send(packet);
+    }
+
+    function hostEmitLobby() {
+      if (!hostRoom) return;
+      hostBroadcast({
+        type: 'lobbyUpdate',
+        code: hostRoom.code,
+        hostId: hostRoom.hostId,
+        phase: hostRoom.phase,
+        matchDuration: hostRoom.matchDuration,
+        players: Object.values(hostRoom.players).map(p => ({
+          id: p.id, name: p.name, skin: p.skin, hat: p.hat, isBot: p.isBot
+        }))
+      });
+    }
+
+    function hostMaintainFlashlights() {
+      if (!hostRoom || validFloorTiles.length === 0) return;
+      const heldCount = Object.values(hostRoom.players).filter(p => p.hasItem).length;
+      const need = MAX_ITEMS_TOTAL - (hostRoom.items.length + heldCount);
+
+      for (let i = 0; i < need; i++) {
+        let bestTile = null;
+        for (let attempt = 0; attempt < 25; attempt++) {
+          const cand = validFloorTiles[Math.floor(Math.random() * validFloorTiles.length)];
+          const cx = (cand.c + 0.5) * TILE_SIZE, cy = (cand.r + 0.5) * TILE_SIZE;
+          const tooCloseItem = hostRoom.items.some(it => Math.hypot(it.x - cx, it.y - cy) < TILE_SIZE * 5);
+          const tooClosePl = Object.values(hostRoom.players).some(p => Math.hypot(p.x - cx, p.y - cy) < TILE_SIZE * 2.5);
+          if (!tooCloseItem && !tooClosePl) { bestTile = { x: cx, y: cy }; break; }
+        }
+        if (!bestTile) {
+          const fb = validFloorTiles[Math.floor(Math.random() * validFloorTiles.length)];
+          bestTile = { x: (fb.c + 0.5) * TILE_SIZE, y: (fb.r + 0.5) * TILE_SIZE };
+        }
+        itemUidCounter++;
+        hostRoom.items.push({ id: 'fl-' + itemUidCounter, x: Math.round(bestTile.x), y: Math.round(bestTile.y) });
+      }
+    }
+
+    function hostFinalizeMatch(endReason, seekerWonAll) {
+      if (!hostRoom || hostRoom.phase === 'ended') return;
+      hostRoom.phase = 'ended';
+      const players = Object.values(hostRoom.players);
+      const hiders = players.filter(p => p.role === 'hider');
+      const survivors = hiders.filter(h => h.status === 'alive').length;
+
+      const results = players.map(p => {
+        if (p.role === 'seeker') {
+          if (seekerWonAll) return { id: p.id, name: p.name, role: 'seeker', outcome: 'win', detail: 'THẮNG (Bắt sạch toàn bộ)' };
+          return { id: p.id, name: p.name, role: 'seeker', outcome: 'lose', detail: `THUA (Còn ${survivors} người sống sót)` };
+        } else {
+          if (!seekerWonAll && p.status === 'alive') return { id: p.id, name: p.name, role: 'hider', outcome: 'win', detail: 'THẮNG (Sống sót hết giờ)' };
+          if (p.status === 'jailed') return { id: p.id, name: p.name, role: 'hider', outcome: 'lose', detail: 'THUA (Bị nhốt trong Lồng)' };
+          return { id: p.id, name: p.name, role: 'hider', outcome: 'lose', detail: 'THUA (Bị bắt phút cuối)' };
+        }
+      });
+
+      hostBroadcast({ type: 'gameEnded', endReason, seekerWonAll, results });
+    }
+
+    function hostCheckMatchEnd() {
+      if (!hostRoom || hostRoom.phase !== 'playing') return;
+      const players = Object.values(hostRoom.players);
+      const seeker = players.find(p => p.role === 'seeker');
+      const hiders = players.filter(p => p.role === 'hider');
+      if (!seeker) { hostFinalizeMatch('Người Bắt đã rời khỏi phòng!', false); return; }
+      if (hiders.length === 0) { hostFinalizeMatch('Không còn Người Chạy nào trong mê cung!', true); return; }
+      if (hiders.every(h => h.status !== 'alive')) {
+        hostFinalizeMatch(`👹 ${seeker.name} đã bắt toàn bộ Người Chạy và CHIẾN THẮNG!`, true);
+      }
+    }
+
+    // Chủ phòng nhận & kiểm duyệt tọa độ mượt gửi lên từ máy khách
+    function hostAcceptGuestPos(playerId, msg) {
+      if (!hostRoom) return;
+      const p = hostRoom.players[playerId];
+      if (!p || p.isBot) return;
+      if (msg.tpSeq !== p.tpSeq) return; // Bỏ qua gói cũ trước khi bị nhốt/được cứu
+
+      if (typeof msg.yaw === 'number' && !Number.isNaN(msg.yaw)) p.yaw = msg.yaw;
+      if (typeof msg.moving === 'boolean') p.moving = msg.moving;
+
+      if (typeof msg.x === 'number' && typeof msg.y === 'number') {
+        const dist = Math.hypot(msg.x - p.x, msg.y - p.y);
+        const physPhase = p.status === 'eliminated' ? 'playing' : hostRoom.phase;
+        if (dist < 520 && !collidesWithMap(msg.x, msg.y, PLAYER_RADIUS - 1.5, physPhase, p)) {
+          p.x = msg.x;
+          p.y = msg.y;
+        }
+      }
+    }
+
+    function hostHandleRescue(playerId, msg) {
+      if (!hostRoom || hostRoom.phase !== 'playing') return;
+      if (msg) hostAcceptGuestPos(playerId, msg);
+      const rescuer = hostRoom.players[playerId];
+      if (!rescuer || rescuer.role !== 'hider' || rescuer.status !== 'alive') return;
+      if (!isInRescueZone(rescuer.x, rescuer.y)) return;
+
+      const rescuable = Object.values(hostRoom.players).filter(
+        h => h.role === 'hider' && h.status === 'jailed' && h.lockTimer <= 0
+      );
+      if (rescuable.length > 0) {
+        const names = rescuable.map(h => {
+          h.status = 'alive';
+          h.lockTimer = 0;
+          h.graceTimer = 3.5;
+          h.x = rescuer.x; h.y = rescuer.y;
+          h.tpSeq++; // Báo máy người được cứu dịch chuyển ngay ra ngoài lồng
+          return h.name;
+        });
+        hostBroadcast({ type: 'toast', message: `🔓 ${rescuer.name} đã GIẢI CỨU ${names.join(', ')} khỏi Lồng Giam!`, style: 'success' });
+      }
+    }
+
+    function hostHandleUseFlashlight(playerId, msg) {
+      if (!hostRoom || (hostRoom.phase !== 'playing' && hostRoom.phase !== 'prep')) return;
+      if (msg) hostAcceptGuestPos(playerId, msg);
+      const user = hostRoom.players[playerId];
+      if (!user || user.role !== 'hider' || user.status !== 'alive' || !user.hasItem) return;
+
+      user.hasItem = false;
+      hostBroadcast({ type: 'flashEffect', x: user.x, y: user.y, yaw: user.yaw });
+
+      const seeker = Object.values(hostRoom.players).find(p => p.role === 'seeker');
+      let hitSeeker = false;
+      if (seeker) {
+        const dx = seeker.x - user.x, dy = seeker.y - user.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist <= FLASH_RANGE) {
+          const fx = -Math.sin(user.yaw), fy = -Math.cos(user.yaw);
+          const dot = dist > 1 ? (dx * fx + dy * fy) / dist : 1;
+          if (dot >= Math.cos(FLASH_HALF_ANGLE) && hasLineOfSight(user.x, user.y, seeker.x, seeker.y)) {
+            hitSeeker = true;
+            seeker.blindTimer = BLIND_DURATION;
+            hostBroadcast({
+              type: 'toast',
+              message: `⚡ ${user.name} chiếu ĐÈN PIN làm chói mắt ${seeker.name} trong 5 giây!`,
+              style: 'success'
+            });
+          }
+        }
+      }
+      if (!hitSeeker) {
+        hostSendTo(playerId, { type: 'toast', message: '🔦 Đã chiếu đèn pin nhưng không trúng Người Bắt!', style: 'info' });
+      }
+      hostMaintainFlashlights();
+    }
+
+    function updateBotAI(bot, players, seeker, dt, xrayOn) {
+      bot.botThink -= dt;
+      if (bot.role === 'seeker') {
+        if (hostRoom.phase === 'prep') { bot.input = { dx: 0, dy: 0 }; return; }
+        if (bot.blindTimer > 0) {
+          if (bot.botThink <= 0) {
+            bot.botThink = 0.6;
+            const a = Math.random() * Math.PI * 2;
+            bot.botDir = { dx: Math.cos(a) * 0.45, dy: Math.sin(a) * 0.45 };
+          }
+          bot.input = { ...bot.botDir };
+          return;
+        }
+
+        let target = null, bestD = Infinity;
+        const visionRange = xrayOn ? 9999 : 400;
+        players.forEach(p => {
+          if (p.role === 'hider' && p.status === 'alive' && p.graceTimer <= 0) {
+            const d = Math.hypot(p.x - bot.x, p.y - bot.y);
+            if (d < bestD && d < visionRange && (xrayOn || hasLineOfSight(bot.x, bot.y, p.x, p.y))) {
+              bestD = d; target = p;
+            }
+          }
+        });
+        if (target) {
+          bot.input = { dx: (target.x - bot.x) / (bestD || 1), dy: (target.y - bot.y) / (bestD || 1) };
+        } else if (bot.botThink <= 0) {
+          bot.botThink = 1.0 + Math.random();
+          const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+          const pick = dirs[Math.floor(Math.random() * dirs.length)];
+          bot.botDir = { dx: pick[0], dy: pick[1] };
+          bot.input = { ...bot.botDir };
+        } else {
+          bot.input = { ...bot.botDir };
+        }
+        if (Math.hypot(bot.input.dx, bot.input.dy) > 0.1) bot.yaw = Math.atan2(-bot.input.dx, -bot.input.dy);
+      } else if (bot.status === 'alive') {
+        if (bot.hasItem && seeker && seeker.blindTimer <= 0) {
+          const distS = Math.hypot(seeker.x - bot.x, seeker.y - bot.y);
+          if (distS < FLASH_RANGE * 0.78 && hasLineOfSight(bot.x, bot.y, seeker.x, seeker.y)) {
+            bot.yaw = Math.atan2(-(seeker.x - bot.x), -(seeker.y - bot.y));
+            hostHandleUseFlashlight(bot.id, null);
+            return;
+          }
+        }
+        if (seeker && Math.hypot(seeker.x - bot.x, seeker.y - bot.y) < 260) {
+          const dx = bot.x - seeker.x, dy = bot.y - seeker.y;
+          const d = Math.hypot(dx, dy) || 1;
+          bot.input = { dx: dx / d, dy: dy / d };
+          bot.yaw = Math.atan2(-bot.input.dx, -bot.input.dy);
+          return;
+        }
+        const needRescue = players.some(p => p.role === 'hider' && p.status === 'jailed' && p.lockTimer <= 0);
+        const seekerNearCenter = seeker && Math.hypot(seeker.x - (CENTER_TILE + 0.5) * TILE_SIZE, seeker.y - (CENTER_TILE + 0.5) * TILE_SIZE) < 270;
+        if (hostRoom.phase === 'playing' && needRescue && !seekerNearCenter) {
+          if (isInRescueZone(bot.x, bot.y)) { hostHandleRescue(bot.id, null); return; }
+          const r = Math.max(0, Math.min(MAP_SIZE - 1, Math.floor(bot.y / TILE_SIZE)));
+          const c = Math.max(0, Math.min(MAP_SIZE - 1, Math.floor(bot.x / TILE_SIZE)));
+          const nxt = flowToCenter[r]?.[c] || { r: CENTER_TILE, c: CENTER_TILE };
+          const dx = (nxt.c + 0.5) * TILE_SIZE - bot.x;
+          const dy = (nxt.r + 0.5) * TILE_SIZE - bot.y;
+          const d = Math.hypot(dx, dy) || 1;
+          bot.input = { dx: dx / d, dy: dy / d };
+          bot.yaw = Math.atan2(-bot.input.dx, -bot.input.dy);
+          return;
+        }
+        if (bot.botThink <= 0) {
+          bot.botThink = 1.0 + Math.random() * 1.4;
+          const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+          const pick = dirs[Math.floor(Math.random() * dirs.length)];
+          bot.botDir = { dx: pick[0], dy: pick[1] };
+        }
+        bot.input = { ...bot.botDir };
+        if (Math.hypot(bot.input.dx, bot.input.dy) > 0.1) bot.yaw = Math.atan2(-bot.input.dx, -bot.input.dy);
+      } else {
+        bot.input = { dx: 0, dy: 0 };
+      }
+    }
+
+    function startHostGameLoop() {
+      if (hostLoopHandle) hostLoopHandle.stop();
+      let lastTick = performance.now();
+
+      hostLoopHandle = createBackgroundSafeLoop(() => {
+        const nowMs = performance.now();
+        const DT = Math.min(0.1, Math.max(0.005, (nowMs - lastTick) / 1000));
+        lastTick = nowMs;
+
+        if (!hostRoom || (hostRoom.phase !== 'prep' && hostRoom.phase !== 'playing')) return;
+
+        hostRoom.timer -= DT;
+
+        if (hostRoom.phase === 'prep' && hostRoom.timer <= 0) {
+          hostRoom.phase = 'playing';
+          hostRoom.timer = hostRoom.matchDuration;
+          hostRoom.finalMinuteAlerted = false;
+          hostBroadcast({ type: 'toast', message: '🚨 LỒNG ĐÃ MỞ! Hãy tìm Đèn Pin và sống sót hết giờ!', style: 'danger' });
+        } else if (hostRoom.phase === 'playing') {
+          if (hostRoom.timer <= FINAL_MINUTE_SEC && !hostRoom.finalMinuteAlerted) {
+            hostRoom.finalMinuteAlerted = true;
+            hostBroadcast({
+              type: 'toast',
+              message: '👁️ 1 PHÚT CUỐI! Đôi Mắt Thấu Thị nháy 2s mỗi 10s — Ai bị bắt lúc này THUA NGAY!',
+              style: 'danger'
+            });
+          }
+          if (hostRoom.timer <= 0) {
+            hostRoom.timer = 0;
+            hostFinalizeMatch('⏱️ HẾT GIỜ! Những Người Chạy còn sống sót đã chiến thắng!', false);
+            return;
+          }
+        }
+
+        const inFinalMin = (hostRoom.phase === 'playing' && hostRoom.timer <= FINAL_MINUTE_SEC);
+        let pulseOn = false, pulseCountdown = 0;
+        if (inFinalMin) {
+          const elapsed = Math.max(0, FINAL_MINUTE_SEC - hostRoom.timer);
+          const mod = elapsed % XRAY_CYCLE_SEC;
+          if (mod < XRAY_ON_SEC) {
+            pulseOn = true;
+            pulseCountdown = Number((XRAY_ON_SEC - mod).toFixed(1));
+          } else {
+            pulseOn = false;
+            pulseCountdown = Math.ceil(XRAY_CYCLE_SEC - mod);
+          }
+        }
+
+        const players = Object.values(hostRoom.players);
+        const seeker = players.find(p => p.role === 'seeker');
+
+        for (const p of players) {
+          if (p.graceTimer > 0) p.graceTimer = Math.max(0, p.graceTimer - DT);
+          if (p.blindTimer > 0) p.blindTimer = Math.max(0, p.blindTimer - DT);
+
+          if (p.status === 'jailed' && p.lockTimer > 0) {
+            const prevLock = Math.ceil(p.lockTimer);
+            p.lockTimer = Math.max(0, p.lockTimer - DT);
+            if (prevLock > 0 && p.lockTimer === 0) {
+              hostBroadcast({
+                type: 'toast',
+                message: `🔓 ${p.name} đã hết 30s khóa! Đồng đội có thể chạy về Lồng Giam CỨU!`,
+                style: 'success'
+              });
+            }
+          }
+
+          // Di chuyển Bot trên máy chủ (Người chơi thật đã tự di chuyển 60fps cục bộ & gửi tọa độ lên)
+          if (p.isBot && (p.status === 'alive' || p.status === 'seeking')) {
+            const prevX = p.x, prevY = p.y;
+            updateBotAI(p, players, seeker, DT, pulseOn);
+            const spd = p.role === 'seeker' ? SEEKER_SPEED : HIDER_SPEED;
+            moveWithCollision(p, p.input.dx * spd, p.input.dy * spd, DT, hostRoom.phase);
+            p.moving = Math.hypot(p.x - prevX, p.y - prevY) > 0.5;
+          }
+
+          // Người Chạy tự do nhặt Đèn Pin nếu chưa có đồ
+          if (p.role === 'hider' && p.status === 'alive' && !p.hasItem) {
+            for (let i = hostRoom.items.length - 1; i >= 0; i--) {
+              const it = hostRoom.items[i];
+              if (Math.hypot(p.x - it.x, p.y - it.y) < 36) {
+                p.hasItem = true;
+                hostRoom.items.splice(i, 1);
+                hostSendTo(p.id, { type: 'toast', message: '🔦 Bạn đã nhặt ĐÈN PIN! Bấm F / Chuột phải (hoặc nút ĐÈN) để làm chói Người Bắt!', style: 'success' });
+                break;
+              }
+            }
+          }
+        }
+
+        // Kiểm tra Người Bắt chạm Người Chạy
+        if (hostRoom.phase === 'playing' && seeker && seeker.blindTimer <= 0) {
+          for (const h of players) {
+            if (h.role === 'hider' && h.status === 'alive' && h.graceTimer <= 0) {
+              if (Math.hypot(seeker.x - h.x, seeker.y - h.y) < PLAYER_RADIUS * 2.25) {
+                if (h.hasItem) {
+                  h.hasItem = false;
+                  hostMaintainFlashlights();
+                }
+
+                if (inFinalMin) {
+                  h.status = 'eliminated';
+                  h.lockTimer = 0;
+                  h.tpSeq++;
+                  hostBroadcast({
+                    type: 'toast',
+                    message: `💀 [PHÚT CUỐI] ${h.name} bị ${seeker.name} bắt và THUA NGAY LẬP TỨC!`,
+                    style: 'danger'
+                  });
+                } else {
+                  h.status = 'jailed';
+                  h.lockTimer = JAIL_LOCK_SECONDS;
+                  const angle = Math.random() * Math.PI * 2;
+                  h.x = (CENTER_TILE + 0.5) * TILE_SIZE + Math.cos(angle) * 28;
+                  h.y = (CENTER_TILE + 0.5) * TILE_SIZE + Math.sin(angle) * 28;
+                  h.tpSeq++; // Ép máy khách dịch chuyển ngay vào Lồng Giam
+                  hostBroadcast({
+                    type: 'toast',
+                    message: `⛓️ ${h.name} bị đưa vào Lồng Giam! Khóa cứu 30 giây!`,
+                    style: 'warning'
+                  });
+                }
+                hostCheckMatchEnd();
+              }
+            }
+          }
+        }
+
+        hostBroadcast({
+          type: 'gameState',
+          phase: hostRoom.phase,
+          timer: Math.ceil(hostRoom.timer),
+          isFinalMinute: inFinalMin,
+          xrayActive: pulseOn,
+          xrayCountdown: pulseCountdown,
+          items: hostRoom.items,
+          players: players.map(p => ({
+            id: p.id, name: p.name, skin: p.skin, hat: p.hat,
+            x: Math.round(p.x * 10) / 10, y: Math.round(p.y * 10) / 10,
+            yaw: Number(p.yaw.toFixed(2)),
+            tpSeq: p.tpSeq,
+            role: p.role, status: p.status,
+            lockTimer: Math.ceil(p.lockTimer),
+            blindTimer: Number(p.blindTimer.toFixed(1)),
+            hasItem: p.hasItem,
+            grace: p.graceTimer > 0,
+            moving: p.moving
+          }))
+        });
+      }, 1000 / 30);
+    }
+
+    function handleClientPacket(data) {
+      if (!data || !data.type) return;
+
+      if (data.type === 'lobbyUpdate') {
+        gamePhase = data.phase;
+        currentRoomCode = data.code;
+        configuredDuration = data.matchDuration || 180;
+        lobbyCodeEl.textContent = data.code;
+        durationDisplay.textContent = formatClock(configuredDuration);
+        endOverlay.classList.add('hidden');
+        blindOverlay.style.opacity = '0';
+        showScreen(lobbyScreen);
+
+        playerCountEl.textContent = data.players.length;
+        playerListEl.innerHTML = '';
+        data.players.forEach(p => {
+          const li = document.createElement('li');
+          const meTag = p.id === myId ? ' (Bạn)' : '';
+          const sk = getSkinInfo(p.skin);
+          const hatObj = HATS.find(h => h.id === p.hat);
+          const hatLabel = hatObj && hatObj.id !== 'none' ? ` · ${hatObj.name}` : '';
+          let badge = '';
+          if (p.id === data.hostId) badge = '<span class="host-badge">★ Chủ phòng</span>';
+          else if (p.isBot) badge = '<span class="bot-badge">BOT</span>';
+          li.innerHTML = `
+            <span class="p-meta">
+              <span class="p-swatch" style="background:${sk.css}"></span>
+              <span>${escapeHtml(p.name)}${meTag}<small style="color:#a89a64">${hatLabel}</small></span>
+            </span>${badge}`;
+          playerListEl.appendChild(li);
+        });
+
+        btnStartGame.classList.toggle('hidden', !isHost);
+        hostBotControls.classList.toggle('hidden', !isHost);
+        btnDurMinus.classList.toggle('hidden', !isHost);
+        btnDurPlus.classList.toggle('hidden', !isHost);
+        waitingHostText.classList.toggle('hidden', isHost);
+      } else if (data.type === 'gameStarted') {
+        gamePhase = data.phase;
+        gameTimer = data.timer;
+        isFinalMinute = false;
+        xrayActive = false;
+        endOverlay.classList.add('hidden');
+        camYaw = 0; camPitch = 0;
+        localPlayer = { x: 0, y: 0, tpSeq: -1, initialized: false, moving: false };
+
+        activeMapGrid = decodeMapGrid(data.mapRows);
+        if (!isHost) computeMapNavigationData(activeMapGrid);
+        rebuildBackroomsWorld3D(activeMapGrid);
+
+        for (const id in playerMeshes) { scene.remove(playerMeshes[id].mesh); delete playerMeshes[id]; }
+        for (const id in groundItemMeshes) { scene.remove(groundItemMeshes[id]); delete groundItemMeshes[id]; }
+        for (const id in smoothPlayers) delete smoothPlayers[id];
+
+        showScreen(gameScreen);
+        resize3D();
+        detectTouchControls();
+      } else if (data.type === 'gameState') {
+        gamePhase = data.phase;
+        gameTimer = data.timer;
+        isFinalMinute = !!data.isFinalMinute;
+        xrayActive = !!data.xrayActive;
+        xrayCountdown = data.xrayCountdown || 0;
+        renderPlayers = data.players;
+        renderItems = data.items || [];
+
+        const me = renderPlayers.find(p => p.id === myId);
+        if (me) {
+          // Chỉ ép nhảy tọa độ khi vừa vào trận, vừa bị nhốt vào lồng, hoặc vừa được cứu!
+          if (!localPlayer.initialized || me.tpSeq !== localPlayer.tpSeq) {
+            localPlayer.x = me.x;
+            localPlayer.y = me.y;
+            localPlayer.tpSeq = me.tpSeq;
+            localPlayer.initialized = true;
+          }
+        }
+
+        renderPlayers.forEach(p => {
+          if (!smoothPlayers[p.id]) smoothPlayers[p.id] = { x: p.x, y: p.y, yaw: p.yaw };
+        });
+        updateHUD();
+      } else if (data.type === 'flashEffect') {
+        spawnFlashBeamEffect(data.x, data.y, data.yaw);
+      } else if (data.type === 'toast') {
+        showToast(data.message, data.style || 'info');
+      } else if (data.type === 'gameEnded') {
+        gamePhase = 'ended';
+        isFinalMinute = false;
+        xrayActive = false;
+        blindOverlay.style.opacity = '0';
+        if (document.pointerLockElement) document.exitPointerLock();
+
+        const myRes = data.results.find(r => r.id === myId);
+        if (myRes) {
+          endPersonalTitle.textContent = myRes.outcome === 'win' ? '🏆 BẠN ĐÃ CHIẾN THẮNG!' : '💀 BẠN ĐÃ THUA CUỘC!';
+          endPersonalTitle.style.color = myRes.outcome === 'win' ? '#4ade80' : '#ff6b6b';
+        }
+        endPersonalSub.textContent = data.endReason || '';
+        endResultsList.innerHTML = '';
+        data.results.forEach(r => {
+          const li = document.createElement('li');
+          const cls = r.outcome === 'win' ? 'res-win' : 'res-lose';
+          const roleTxt = r.role === 'seeker' ? '🔴 Bắt' : '⚪ Chạy';
+          const meTxt = r.id === myId ? ' (Bạn)' : '';
+          li.innerHTML = `<span>${roleTxt} · <b>${escapeHtml(r.name)}${meTxt}</b></span><span class="${cls}">${escapeHtml(r.detail)}</span>`;
+          endResultsList.appendChild(li);
+        });
+
+        endOverlay.classList.remove('hidden');
+        btnBackLobby.classList.toggle('hidden', !isHost);
+        endWaitHost.classList.toggle('hidden', isHost);
+      } else if (data.type === 'error') {
+        menuError.textContent = data.message;
+        lobbyError.textContent = data.message;
+      }
+    }
+
+    // =========================================================================
+    // 7. SỰ KIỆN MENU & LOBBY
+    // =========================================================================
+    function setMenuLoading(loading, text) {
+      btnCreate.disabled = loading;
+      btnJoin.disabled = loading;
+      if (text !== undefined) menuError.textContent = text;
+    }
+
+    btnDurMinus.addEventListener('click', () => {
+      if (!isHost || !hostRoom) return;
+      hostRoom.matchDuration = Math.max(90, hostRoom.matchDuration - 30);
+      hostEmitLobby();
+    });
+
+    btnDurPlus.addEventListener('click', () => {
+      if (!isHost || !hostRoom) return;
+      hostRoom.matchDuration = Math.min(600, hostRoom.matchDuration + 30);
+      hostEmitLobby();
+    });
+
+    btnCreate.addEventListener('click', () => {
+      const name = nameInput.value.trim();
+      if (!name) { menuError.textContent = 'Vui lòng nhập tên của bạn!'; return; }
+      setMenuLoading(true, 'Đang khởi tạo phòng 20 người...');
+      const code = generateRoomCode();
+      if (peer) peer.destroy();
+
+      isHost = true;
+      peer = new Peer(ROOM_PREFIX + code, PEER_CONFIG);
+
+      peer.on('open', (id) => {
+        myId = id; currentRoomCode = code;
+        setMenuLoading(false, '');
+        hostRoom = {
+          code, hostId: id, phase: 'lobby', timer: 0,
+          matchDuration: 180, finalMinuteAlerted: false,
+          items: [],
+          players: { [id]: createPlayerObj(id, name, myCosmetics, false) }
+        };
+        startHostGameLoop();
+        hostEmitLobby();
+      });
+
+      peer.on('connection', (conn) => {
+        conn.on('data', (msg) => {
+          if (!msg || !msg.type) return;
+          if (msg.type === 'join') {
+            if (hostRoom.phase !== 'lobby' && hostRoom.phase !== 'ended') {
+              conn.send({ type: 'error', message: 'Phòng đang trong trận, vui lòng đợi ván sau!' });
+              setTimeout(() => conn.close(), 300);
+              return;
+            }
+            if (Object.keys(hostRoom.players).length >= MAX_PLAYERS) {
+              conn.send({ type: 'error', message: `Phòng đã đầy (tối đa ${MAX_PLAYERS} người)!` });
+              setTimeout(() => conn.close(), 300);
+              return;
+            }
+            guestConns[conn.peer] = conn;
+            hostRoom.players[conn.peer] = createPlayerObj(conn.peer, msg.name, { skin: msg.skin, hat: msg.hat }, false);
+            hostEmitLobby();
+          } else if (msg.type === 'cosmetics') {
+            const pl = hostRoom.players[conn.peer];
+            if (pl) { pl.skin = msg.skin; pl.hat = msg.hat; if (hostRoom.phase === 'lobby') hostEmitLobby(); }
+          } else if (msg.type === 'pos') {
+            hostAcceptGuestPos(conn.peer, msg);
+          } else if (msg.type === 'rescue') {
+            hostHandleRescue(conn.peer, msg);
+          } else if (msg.type === 'useItem') {
+            hostHandleUseFlashlight(conn.peer, msg);
+          }
+        });
+
+        conn.on('close', () => {
+          const left = hostRoom.players[conn.peer];
+          const hadItem = left?.hasItem;
+          delete guestConns[conn.peer];
+          delete hostRoom.players[conn.peer];
+          if (hadItem) hostMaintainFlashlights();
+          if (left) hostBroadcast({ type: 'toast', message: `${left.name} đã rời phòng.`, style: 'info' });
+          if (hostRoom.phase === 'lobby' || hostRoom.phase === 'ended') hostEmitLobby();
+          else hostCheckMatchEnd();
+        });
+      });
+
+      peer.on('error', (err) => {
+        setMenuLoading(false, 'Lỗi kết nối (' + err.type + '). Bấm Tạo Phòng lại!');
+      });
+    });
+
+    btnJoin.addEventListener('click', () => {
+      const name = nameInput.value.trim();
+      const code = roomCodeInput.value.trim().toUpperCase();
+      if (!name) { menuError.textContent = 'Vui lòng nhập tên của bạn!'; return; }
+      if (code.length !== 4) { menuError.textContent = 'Mã phòng phải gồm 4 ký tự!'; return; }
+
+      setMenuLoading(true, 'Đang kết nối tới phòng ' + code + '...');
+      if (peer) peer.destroy();
+
+      isHost = false;
+      peer = new Peer(PEER_CONFIG);
+      let connected = false;
+      const timeout = setTimeout(() => {
+        if (!connected) { setMenuLoading(false, 'Không tìm thấy phòng hoặc mạng bị chặn!'); if (peer) peer.destroy(); }
+      }, 9000);
+
+      peer.on('open', (id) => {
+        myId = id;
+        hostConn = peer.connect(ROOM_PREFIX + code, { reliable: true });
+        hostConn.on('open', () => {
+          connected = true; clearTimeout(timeout); setMenuLoading(false, '');
+          hostConn.send({ type: 'join', name, skin: myCosmetics.skin, hat: myCosmetics.hat });
+        });
+        hostConn.on('data', (msg) => handleClientPacket(msg));
+        hostConn.on('close', () => { showScreen(menuScreen); menuError.textContent = 'Chủ phòng đã đóng phòng hoặc mất kết nối.'; });
+      });
+
+      peer.on('error', (err) => {
+        clearTimeout(timeout);
+        setMenuLoading(false, err.type === 'peer-unavailable' ? 'Không tìm thấy mã phòng ' + code + '!' : 'Lỗi kết nối (' + err.type + ').');
+      });
+    });
+
+    document.getElementById('btn-copy-code').addEventListener('click', () => {
+      if (!currentRoomCode) return;
+      navigator.clipboard?.writeText(currentRoomCode);
+      const b = document.getElementById('btn-copy-code');
+      b.textContent = 'Đã chép!';
+      setTimeout(() => (b.textContent = 'Sao chép'), 1500);
+    });
+
+    document.getElementById('btn-add-bot').addEventListener('click', () => {
+      if (!isHost || !hostRoom || Object.keys(hostRoom.players).length >= MAX_PLAYERS) return;
+      botCounter++;
+      const botId = 'bot-' + botCounter;
+      const randSkin = SKINS[Math.floor(Math.random() * SKINS.length)].id;
+      const randHat = HATS[Math.floor(Math.random() * HATS.length)].id;
+      hostRoom.players[botId] = createPlayerObj(botId, 'Bot ' + botCounter, { skin: randSkin, hat: randHat }, true);
+      hostEmitLobby();
+    });
+
+    document.getElementById('btn-clear-bots').addEventListener('click', () => {
+      if (!isHost || !hostRoom) return;
+      for (const id in hostRoom.players) if (hostRoom.players[id].isBot) delete hostRoom.players[id];
+      hostEmitLobby();
+    });
+
+    btnStartGame.addEventListener('click', () => {
+      if (!isHost || !hostRoom) return;
+      lobbyError.textContent = '';
+      const list = Object.values(hostRoom.players);
+      if (list.length < 2) {
+        lobbyError.textContent = 'Cần ít nhất 2 người (hoặc bấm "+ Thêm Bot" để test thử)!';
+        return;
+      }
+
+      const newMap = generateRandomBackroomsMap();
+      activeMapGrid = newMap;
+      computeMapNavigationData(newMap);
+
+      const seekerIdx = Math.floor(Math.random() * list.length);
+      const spawns = validHiderSpawns.slice().sort(() => Math.random() - 0.5);
+      let sIdx = 0;
+
+      list.forEach((p, idx) => {
+        p.input = { dx: 0, dy: 0 };
+        p.lockTimer = 0; p.graceTimer = 0; p.blindTimer = 0;
+        p.hasItem = false;
+        p.yaw = 0;
+        p.tpSeq++;
+        if (idx === seekerIdx) {
+          p.role = 'seeker'; p.status = 'seeking';
+          p.x = (CENTER_TILE + 0.5) * TILE_SIZE;
+          p.y = (CENTER_TILE + 0.5) * TILE_SIZE;
+        } else {
+          p.role = 'hider'; p.status = 'alive';
+          const sp = spawns[sIdx % spawns.length] || { r: 1, c: 1 }; sIdx++;
+          p.x = (sp.c + 0.5) * TILE_SIZE;
+          p.y = (sp.r + 0.5) * TILE_SIZE;
+        }
+      });
+
+      hostRoom.items = [];
+      hostMaintainFlashlights();
+
+      hostRoom.phase = 'prep';
+      hostRoom.timer = PREP_DURATION;
+      hostRoom.finalMinuteAlerted = false;
+
+      hostBroadcast({
+        type: 'gameStarted',
+        phase: 'prep',
+        timer: PREP_DURATION,
+        mapRows: encodeMapGrid(newMap)
+      });
+      hostBroadcast({
+        type: 'toast',
+        message: `${list[seekerIdx].name} là NGƯỜI BẮT (Đỏ)! Mê cung 35×35 mới đã mở — chạy trốn 15s!`,
+        style: 'warning'
+      });
+    });
+
+    btnBackLobby.addEventListener('click', () => {
+      if (!isHost || !hostRoom) return;
+      hostRoom.phase = 'lobby';
+      hostEmitLobby();
+    });
+
+    // =========================================================================
+    // 8. ĐIỀU KHIỂN GÓC NHÌN THỨ NHẤT (PC & ĐIỆN THOẠI)
+    // =========================================================================
+    const keys = {};
+    let camYaw = 0, camPitch = 0;
+    let joystickVec = { dx: 0, dy: 0 };
+    let isTouchDevice = false;
+
+    function detectTouchControls() {
+      isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || window.innerWidth <= 900;
+      mobileControls.classList.toggle('hidden', !isTouchDevice);
+      updateLockHint();
+    }
+
+    function updateLockHint() {
+      const show = gameScreen.classList.contains('active')
+        && !isTouchDevice
+        && document.pointerLockElement !== gameCanvas
+        && endOverlay.classList.contains('hidden');
+      pcLockHint.classList.toggle('hidden', !show);
+    }
+
+    gameCanvas.addEventListener('click', () => {
+      if (!isTouchDevice && gameScreen.classList.contains('active') && endOverlay.classList.contains('hidden')) {
+        gameCanvas.requestPointerLock?.();
+      }
+    });
+    gameCanvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    window.addEventListener('mousedown', (e) => {
+      if (e.button === 2 && gameScreen.classList.contains('active') && endOverlay.classList.contains('hidden')) {
+        sendUseFlashlight();
+      }
+    });
+    document.addEventListener('pointerlockchange', updateLockHint);
+
+    // Tự nhả toàn bộ phím khi chuyển sang tab khác để nhân vật không tự chạy
+    window.addEventListener('blur', () => {
+      for (const k in keys) keys[k] = false;
+      joystickVec = { dx: 0, dy: 0 };
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (document.pointerLockElement === gameCanvas) {
+        camYaw -= e.movementX * 0.0024;
+        camPitch = Math.max(-1.05, Math.min(1.05, camPitch - e.movementY * 0.0022));
+      }
+    });
+
+    function buildActionSnapshot() {
+      return {
+        x: Math.round(localPlayer.x * 10) / 10,
+        y: Math.round(localPlayer.y * 10) / 10,
+        yaw: Number(camYaw.toFixed(3)),
+        moving: localPlayer.moving,
+        tpSeq: localPlayer.tpSeq
+      };
+    }
+
+    function sendRescue() {
+      const snap = buildActionSnapshot();
+      if (isHost) hostHandleRescue(myId, snap);
+      else if (hostConn && hostConn.open) hostConn.send({ type: 'rescue', ...snap });
+    }
+
+    function sendUseFlashlight() {
+      const snap = buildActionSnapshot();
+      if (isHost) hostHandleUseFlashlight(myId, snap);
+      else if (hostConn && hostConn.open) hostConn.send({ type: 'useItem', ...snap });
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (!gameScreen.classList.contains('active')) return;
+      const k = e.key.toLowerCase();
+      keys[k] = true;
+      if (e.code === 'Space' || k === 'e') { e.preventDefault(); sendRescue(); }
+      if (k === 'f' || k === 'q') { e.preventDefault(); sendUseFlashlight(); }
+    });
+
+    window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
+
+    // Joystick trái trên điện thoại
+    const joystickZone = document.getElementById('joystick-zone');
+    const joystickBase = document.getElementById('joystick-base');
+    const joystickKnob = document.getElementById('joystick-knob');
+    let joyTouchId = null;
+    const maxJoyDist = 42;
+
+    function updateJoystick(cx, cy) {
+      const rect = joystickBase.getBoundingClientRect();
+      let dx = cx - (rect.left + rect.width / 2);
+      let dy = cy - (rect.top + rect.height / 2);
+      const d = Math.hypot(dx, dy);
+      if (d > maxJoyDist) { dx = (dx / d) * maxJoyDist; dy = (dy / d) * maxJoyDist; }
+      joystickKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+      joystickVec = { dx: dx / maxJoyDist, dy: dy / maxJoyDist };
+    }
+
+    joystickZone.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      if (joyTouchId === null) {
+        const t = e.changedTouches[0]; joyTouchId = t.identifier;
+        updateJoystick(t.clientX, t.clientY);
+      }
+    }, { passive: false });
+
+    joystickZone.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      for (const t of e.changedTouches) {
+        if (t.identifier === joyTouchId) { updateJoystick(t.clientX, t.clientY); break; }
+      }
+    }, { passive: false });
+
+    function releaseJoystick(e) {
+      for (const t of e.changedTouches) {
+        if (t.identifier === joyTouchId) {
+          joyTouchId = null; joystickKnob.style.transform = 'translate(-50%, -50%)';
+          joystickVec = { dx: 0, dy: 0 }; break;
+        }
+      }
+    }
+    joystickZone.addEventListener('touchend', releaseJoystick);
+    joystickZone.addEventListener('touchcancel', releaseJoystick);
+
+    let lookTouchId = null, lastLookX = 0, lastLookY = 0;
+    gameCanvas.addEventListener('touchstart', (e) => {
+      for (const t of e.changedTouches) {
+        if (lookTouchId === null && t.identifier !== joyTouchId) {
+          lookTouchId = t.identifier; lastLookX = t.clientX; lastLookY = t.clientY; break;
+        }
+      }
+    }, { passive: true });
+
+    gameCanvas.addEventListener('touchmove', (e) => {
+      for (const t of e.changedTouches) {
+        if (t.identifier === lookTouchId) {
+          const dx = t.clientX - lastLookX, dy = t.clientY - lastLookY;
+          lastLookX = t.clientX; lastLookY = t.clientY;
+          camYaw -= dx * 0.0055;
+          camPitch = Math.max(-1.0, Math.min(1.0, camPitch - dy * 0.0045));
+          break;
+        }
+      }
+    }, { passive: true });
+
+    function releaseLookTouch(e) {
+      for (const t of e.changedTouches) if (t.identifier === lookTouchId) { lookTouchId = null; break; }
+    }
+    gameCanvas.addEventListener('touchend', releaseLookTouch);
+    gameCanvas.addEventListener('touchcancel', releaseLookTouch);
+
+    btnMobileRescue.addEventListener('touchstart', (e) => { e.preventDefault(); sendRescue(); }, { passive: false });
+    btnMobileRescue.addEventListener('click', () => sendRescue());
+    btnMobileFlash.addEventListener('touchstart', (e) => { e.preventDefault(); sendUseFlashlight(); }, { passive: false });
+    btnMobileFlash.addEventListener('click', () => sendUseFlashlight());
+
+    // =========================================================================
+    // 9. CẬP NHẬT HUD, MINIMAP & VÒNG LẶP RENDER 3D (60FPS CỤC BỘ SIÊU MƯỢT)
+    // =========================================================================
+    function updateHUD() {
+      const me = renderPlayers.find(p => p.id === myId);
+      if (!me) return;
+
+      hudTimer.classList.toggle('final-min', isFinalMinute);
+      if (gamePhase === 'prep') hudTimer.textContent = `CHUẨN BỊ: ${gameTimer}s`;
+      else if (isFinalMinute) hudTimer.textContent = `👁️ PHÚT CUỐI: ${formatClock(gameTimer)}`;
+      else hudTimer.textContent = `⏳ ${formatClock(gameTimer)}`;
+
+      if (me.role === 'seeker' && me.blindTimer > 0) {
+        const fade = me.blindTimer < 1.0 ? me.blindTimer : 1.0;
+        blindOverlay.style.opacity = String(fade);
+        blindCountdown.textContent = `Không thể bắt người trong ${me.blindTimer.toFixed(1)}s`;
+      } else {
+        blindOverlay.style.opacity = '0';
+      }
+
+      const showXrayHud = (me.role === 'seeker' && isFinalMinute);
+      hudXrayBadge.classList.toggle('hidden', !showXrayHud);
+      hudXrayBadge.classList.toggle('active-pulse', showXrayHud && xrayActive);
+      if (showXrayHud) {
+        hudXrayBadge.textContent = xrayActive
+          ? `👁️ THẤU THỊ BẬT (${xrayCountdown}s)`
+          : `👁️ Thấu Thị: Hồi ${xrayCountdown}s`;
+      }
+
+      xrayVignette.classList.toggle('hidden', !(showXrayHud && xrayActive));
+      caughtVignette.classList.toggle('hidden', me.status !== 'jailed');
+
+      const isAliveHider = (me.role === 'hider' && me.status === 'alive');
+      hudItemBadge.classList.toggle('hidden', !isAliveHider);
+      hudItemBadge.classList.toggle('has-item', isAliveHider && me.hasItem);
+      hudItemBadge.textContent = me.hasItem ? '🔦 ĐÈN PIN (1/1)' : '🔦 Trống (0/1)';
+
+      if (me.role === 'seeker') {
+        hudRole.textContent = me.blindTimer > 0 ? `⚡ BỊ CHÓI (${me.blindTimer.toFixed(1)}s)` : '🔴 NGƯỜI BẮT';
+        hudRole.style.borderColor = me.blindTimer > 0 ? '#fde047' : '#ff595e';
+        hudRole.style.color = me.blindTimer > 0 ? '#fef08a' : '#ff8a8e';
+      } else if (me.status === 'alive') {
+        hudRole.textContent = me.grace ? '🛡️ MIỄN NHIỄM' : '⚪ NGƯỜI CHẠY';
+        hudRole.style.borderColor = me.grace ? '#38bdf8' : '#e5e7eb';
+        hudRole.style.color = me.grace ? '#7dd3fc' : '#ffffff';
+      } else if (me.status === 'jailed') {
+        hudRole.textContent = me.lockTimer > 0
+          ? `🔒 TRONG LỒNG (Khóa: ${me.lockTimer}s)`
+          : '🆘 TRONG LỒNG (Cứu được rồi!)';
+        hudRole.style.borderColor = me.lockTimer > 0 ? '#ff9f1c' : '#4ade80';
+        hudRole.style.color = me.lockTimer > 0 ? '#ffd166' : '#86efac';
+      } else {
+        hudRole.textContent = '💀 ĐÃ BỊ LOẠI (Khán giả)';
+        hudRole.style.borderColor = '#ff595e';
+        hudRole.style.color = '#fca5a5';
+      }
+
+      const aliveCount = renderPlayers.filter(p => p.role === 'hider' && p.status === 'alive').length;
+      const jailedCount = renderPlayers.filter(p => p.role === 'hider' && p.status === 'jailed').length;
+      const elimCount = renderPlayers.filter(p => p.role === 'hider' && p.status === 'eliminated').length;
+      hudStats.textContent = `Sống: ${aliveCount} | Giam: ${jailedCount} | Loại: ${elimCount}`;
+
+      const curX = localPlayer.initialized ? localPlayer.x : me.x;
+      const curY = localPlayer.initialized ? localPlayer.y : me.y;
+      btnMobileRescue.classList.toggle('hidden', !isAliveHider);
+      btnMobileFlash.classList.toggle('hidden', !(isAliveHider && me.hasItem));
+
+      const hasRescuable = renderPlayers.some(p => p.role === 'hider' && p.status === 'jailed' && p.lockTimer <= 0);
+      const canRescue = (gamePhase === 'playing' && isAliveHider && isInRescueZone(curX, curY) && hasRescuable);
+      btnMobileRescue.classList.toggle('ready', canRescue);
+      rescuePrompt.classList.toggle('hidden', !(canRescue && !isTouchDevice));
+      flashPrompt.classList.toggle('hidden', !(isAliveHider && me.hasItem && !isTouchDevice));
+    }
+
+    function drawMinimap(mePos, meObj) {
+      if (activeMapGrid.length === 0) return;
+      const w = minimapCanvas.width, cell = w / activeMapGrid.length;
+      mctx.clearRect(0, 0, w, w);
+      mctx.drawImage(minimapBaseCanvas, 0, 0);
+
+      if (meObj && meObj.role === 'hider' && meObj.status === 'alive') {
+        mctx.fillStyle = '#fde047';
+        renderItems.forEach(it => {
+          mctx.beginPath();
+          mctx.arc((it.x / TILE_SIZE) * cell, (it.y / TILE_SIZE) * cell, 2.4, 0, Math.PI * 2);
+          mctx.fill();
+        });
+      }
+
+      const seekerXrayPulse = (meObj && meObj.role === 'seeker' && isFinalMinute && xrayActive);
+
+      renderPlayers.forEach(p => {
+        if (p.id === myId) return;
+        const sp = smoothPlayers[p.id] || p;
+        if (p.status === 'jailed') {
+          mctx.fillStyle = p.lockTimer > 0 ? '#ff9f1c' : '#4ade80';
+          mctx.beginPath();
+          mctx.arc((sp.x / TILE_SIZE) * cell, (sp.y / TILE_SIZE) * cell, 2.6, 0, Math.PI * 2);
+          mctx.fill();
+        }
+        if (seekerXrayPulse && p.role === 'hider' && p.status === 'alive') {
+          mctx.fillStyle = '#ff2a3c';
+          mctx.beginPath();
+          mctx.arc((sp.x / TILE_SIZE) * cell, (sp.y / TILE_SIZE) * cell, 3.0, 0, Math.PI * 2);
+          mctx.fill();
+        }
+      });
+
+      if (mePos) {
+        const px = (mePos.x / TILE_SIZE) * cell;
+        const py = (mePos.y / TILE_SIZE) * cell;
+        mctx.save();
+        mctx.translate(px, py);
+        mctx.rotate(-camYaw);
+        mctx.fillStyle = meObj?.role === 'seeker' ? '#ff4757' : '#4ade80';
+        mctx.beginPath();
+        mctx.moveTo(0, -4.5); mctx.lineTo(-3.1, 3.5); mctx.lineTo(3.1, 3.5);
+        mctx.closePath(); mctx.fill();
+        mctx.restore();
+      }
+    }
+
+    function resize3D() {
+      const w = window.innerWidth, h = window.innerHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+      detectTouchControls();
+    }
+    window.addEventListener('resize', resize3D);
+    resize3D();
+
+    let lastFrameTime = performance.now();
+
+    function animate(now) {
+      requestAnimationFrame(animate);
+      const dt = Math.min(0.05, Math.max(0.001, (now - lastFrameTime) / 1000));
+      lastFrameTime = now;
+      const t = now / 1000;
+
+      if (menuScreen.classList.contains('active') && previewChar) {
+        if (!dragPreview) previewAngle += 0.008;
+        previewChar.rotation.y = previewAngle;
+        previewChar.position.y = Math.sin(t * 2.5) * 0.04;
+        previewRenderer.render(previewScene, previewCamera);
+        return;
+      }
+
+      if (!gameScreen.classList.contains('active')) return;
+
+      if (Math.random() < 0.025) ambientLight.intensity = 0.52 + Math.random() * 0.14;
+      else ambientLight.intensity += (0.72 - ambientLight.intensity) * 0.18;
+
+      const anyoneJailed = renderPlayers.some(p => p.status === 'jailed');
+      if (cageBarsGroup && cageBarMat) {
+        if (gamePhase === 'prep') {
+          cageBarsGroup.visible = true;
+          cageBarMat.color.setHex(0xff4757);
+          cageBarMat.opacity = 0.82;
+        } else if (anyoneJailed) {
+          cageBarsGroup.visible = true;
+          const anyReady = renderPlayers.some(p => p.status === 'jailed' && p.lockTimer <= 0);
+          cageBarMat.color.setHex(anyReady ? 0x4ade80 : 0xff9f1c);
+          cageBarMat.opacity = 0.38;
+        } else {
+          cageBarsGroup.visible = false;
+        }
+      }
+      if (jailRing) jailRing.rotation.z = t * 0.8;
+
+      // Đồng bộ & xoay 3D các cây Đèn Pin
+      const activeItemIds = new Set();
+      renderItems.forEach(it => {
+        activeItemIds.add(it.id);
+        let mesh = groundItemMeshes[it.id];
+        if (!mesh) { mesh = createGroundItemMesh(); scene.add(mesh); groundItemMeshes[it.id] = mesh; }
+        mesh.position.set(it.x * WORLD_SCALE, 0, it.y * WORLD_SCALE);
+        mesh.userData.fl.rotation.y = t * 2.2;
+        mesh.userData.fl.position.y = 0.65 + Math.sin(t * 3.5) * 0.12;
+      });
+      for (const id in groundItemMeshes) {
+        if (!activeItemIds.has(id)) { scene.remove(groundItemMeshes[id]); delete groundItemMeshes[id]; }
+      }
+
+      // Cập nhật các luồng sáng đèn pin vừa chiếu
+      for (let i = activeFlashBeams.length - 1; i >= 0; i--) {
+        const b = activeFlashBeams[i];
+        b.life -= dt;
+        const ratio = Math.max(0, b.life / b.maxLife);
+        b.mesh.material.opacity = ratio * 0.58;
+        b.light.intensity = ratio * 3.2;
+        if (b.life <= 0) {
+          scene.remove(b.mesh); scene.remove(b.light);
+          b.mesh.geometry.dispose(); b.mesh.material.dispose();
+          activeFlashBeams.splice(i, 1);
+        }
+      }
+
+      const meObj = renderPlayers.find(p => p.id === myId);
+
+      // XỬ LÝ DI CHUYỂN CỤC BỘ 60FPS CHO CHÍNH MÌNH (MƯỢT TUYỆT ĐỐI Ở CẢ TAB 1 & TAB 2)
+      if (meObj && localPlayer.initialized && gamePhase !== 'ended') {
+        if (keys['arrowleft']) camYaw += 2.25 * dt;
+        if (keys['arrowright']) camYaw -= 2.25 * dt;
+
+        let forward = -joystickVec.dy, strafe = joystickVec.dx;
+        if (Math.abs(forward) < 0.05 && Math.abs(strafe) < 0.05) {
+          if (keys['w'] || keys['arrowup']) forward += 1;
+          if (keys['s'] || keys['arrowdown']) forward -= 1;
+          if (keys['d']) strafe += 1;
+          if (keys['a']) strafe -= 1;
+        }
+
+        let wDx = 0, wDy = 0;
+        const mag = Math.hypot(forward, strafe);
+        if (mag > 0.05) {
+          const clamped = Math.min(1, mag);
+          const nf = (forward / mag) * clamped;
+          const ns = (strafe / mag) * clamped;
+          const fx = -Math.sin(camYaw), fz = -Math.cos(camYaw);
+          const rx = Math.cos(camYaw),  rz = -Math.sin(camYaw);
+          wDx = fx * nf + rx * ns;
+          wDy = fz * nf + rz * ns;
+        }
+
+        const prevX = localPlayer.x, prevY = localPlayer.y;
+        let spd = meObj.role === 'seeker' ? SEEKER_SPEED : HIDER_SPEED;
+        let physPhase = gamePhase;
+        if (meObj.status === 'jailed') spd = HIDER_SPEED * 0.75;
+        else if (meObj.status === 'eliminated') { spd = HIDER_SPEED * 1.15; physPhase = 'playing'; }
+
+        const proxy = { x: localPlayer.x, y: localPlayer.y, status: meObj.status };
+        moveWithCollision(proxy, wDx * spd, wDy * spd, dt, physPhase);
+        localPlayer.x = proxy.x;
+        localPlayer.y = proxy.y;
+        localPlayer.moving = Math.hypot(localPlayer.x - prevX, localPlayer.y - prevY) > 0.15;
+
+        // Cập nhật ngay vào Chủ phòng hoặc gửi gói tọa độ lên Chủ phòng 30 lần/giây
+        if (isHost && hostRoom && hostRoom.players[myId] && hostRoom.players[myId].tpSeq === localPlayer.tpSeq) {
+          const hp = hostRoom.players[myId];
+          hp.x = localPlayer.x;
+          hp.y = localPlayer.y;
+          hp.yaw = camYaw;
+          hp.moving = localPlayer.moving;
+        } else if (!isHost && hostConn && hostConn.open && now - lastPosSendMs >= 33) {
+          lastPosSendMs = now;
+          hostConn.send({ type: 'pos', ...buildActionSnapshot() });
+        }
+      }
+
+      const seekerXrayPulseOn = !!(meObj && meObj.role === 'seeker' && isFinalMinute && xrayActive);
+      if (seekerXrayPulseOn) xraySilhouetteMat.opacity = 0.45 + Math.sin(t * 10) * 0.18;
+
+      fpFlashlight.visible = !!(meObj && meObj.role === 'hider' && meObj.status === 'alive' && meObj.hasItem);
+      if (fpFlashlight.visible) {
+        fpFlashlight.position.y = -0.30 + (localPlayer.moving ? Math.sin(t * 12) * 0.015 : Math.sin(t * 2.2) * 0.005);
+      }
+
+      // Nội suy mượt vị trí các người chơi khác (không phụ thuộc tốc độ khung hình)
+      const smoothAlpha = 1 - Math.exp(-14 * dt);
+      const activeIds = new Set();
+
+      renderPlayers.forEach(p => {
+        activeIds.add(p.id);
+        if (p.id === myId) {
+          if (playerMeshes[p.id]) playerMeshes[p.id].mesh.visible = false;
+          return;
+        }
+
+        const sp = smoothPlayers[p.id] || { x: p.x, y: p.y, yaw: p.yaw };
+        if (Math.hypot(p.x - sp.x, p.y - sp.y) > 220) { sp.x = p.x; sp.y = p.y; }
+        else {
+          sp.x += (p.x - sp.x) * smoothAlpha;
+          sp.y += (p.y - sp.y) * smoothAlpha;
+        }
+        let dyaw = p.yaw - sp.yaw;
+        while (dyaw > Math.PI) dyaw -= Math.PI * 2;
+        while (dyaw < -Math.PI) dyaw += Math.PI * 2;
+        sp.yaw += dyaw * smoothAlpha;
+        smoothPlayers[p.id] = sp;
+
+        const entry = syncPlayerMesh3D(p);
+        const visibleInWorld = (p.status !== 'eliminated');
+        entry.mesh.visible = visibleInWorld;
+        if (visibleInWorld) {
+          entry.mesh.position.set(sp.x * WORLD_SCALE, 0, sp.y * WORLD_SCALE);
+          entry.mesh.rotation.y = sp.yaw;
+          const ud = entry.mesh.userData;
+
+          const showXrayForThis = seekerXrayPulseOn && p.role === 'hider' && p.status === 'alive';
+          if (ud.xrayGroup) ud.xrayGroup.visible = showXrayForThis;
+          if (entry.nameTag) {
+            entry.nameTag.material.depthTest = !showXrayForThis;
+            entry.nameTag.renderOrder = showXrayForThis ? 1000 : 0;
+          }
+
+          if (p.moving) {
+            ud.bodyGroup.position.y = Math.abs(Math.sin(t * 13)) * 0.12;
+            ud.bodyGroup.rotation.z = Math.sin(t * 13) * 0.08;
+            ud.leftLeg.rotation.x = Math.sin(t * 13) * 0.45;
+            ud.rightLeg.rotation.x = -Math.sin(t * 13) * 0.45;
+          } else {
+            ud.bodyGroup.position.y = 0; ud.bodyGroup.rotation.z = 0;
+            ud.leftLeg.rotation.x = 0; ud.rightLeg.rotation.x = 0;
+          }
+        }
+      });
+
+      for (const id in playerMeshes) {
+        if (!activeIds.has(id)) { scene.remove(playerMeshes[id].mesh); delete playerMeshes[id]; }
+      }
+
+      if (localPlayer.initialized && meObj) {
+        const isSpec = (meObj.status === 'eliminated');
+        const bob = (localPlayer.moving && !isSpec) ? Math.sin(t * 12) * 0.075 : 0;
+        const eyeY = isSpec ? 2.55 : (1.62 + bob);
+        camera.position.set(localPlayer.x * WORLD_SCALE, eyeY, localPlayer.y * WORLD_SCALE);
+        camera.rotation.y = camYaw;
+        camera.rotation.x = camPitch;
+        playerFlashLight.position.copy(camera.position);
+      }
+
+      renderer.render(scene, camera);
+      drawMinimap(localPlayer.initialized ? localPlayer : null, meObj);
+    }
+
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>
