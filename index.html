@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="theme-color" content="#121007" />
-  <title>THE BACKROOMS 3D: Sinh Tồn 20 Người & Đèn Pin</title>
+  <title>THE BACKROOMS 3D: Sinh Tồn 20 Người & Tủ Trang Phục</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <style>
@@ -49,17 +49,17 @@
 
     #menu-screen, #lobby-screen {
       background: radial-gradient(circle at center, #3b3518 0%, #121007 85%);
-      padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+      padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
       touch-action: pan-y;
     }
 
     .panel {
       width: 100%;
-      max-width: 490px;
+      max-width: 510px;
       background: rgba(22, 19, 9, 0.95);
       border: 2px solid #c7b152;
       border-radius: 14px;
-      padding: 18px;
+      padding: 16px;
       box-shadow: 0 0 38px rgba(214, 190, 82, 0.22);
       margin: auto;
       position: relative;
@@ -68,13 +68,21 @@
     .panel-top {
       position: relative;
       margin-bottom: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
 
-    .btn-fs-corner {
+    .top-corner-btns {
       position: absolute;
       top: -2px;
       right: 0;
-      padding: 5px 9px;
+      display: flex;
+      gap: 5px;
+    }
+
+    .btn-corner {
+      padding: 5px 8px;
       background: #2c2610;
       color: #f0da75;
       border: 1px solid #8a7b39;
@@ -86,18 +94,17 @@
 
     .title {
       text-align: center;
-      font-size: 1.55rem;
-      letter-spacing: 2.5px;
+      font-size: 1.48rem;
+      letter-spacing: 2.2px;
       color: #f0da75;
       text-shadow: 0 0 12px rgba(240, 218, 117, 0.45);
-      padding-right: 48px;
-      padding-left: 48px;
+      padding: 0 86px;
     }
 
     .subtitle {
       text-align: center;
-      font-size: 0.72rem;
-      letter-spacing: 1.5px;
+      font-size: 0.7rem;
+      letter-spacing: 1.3px;
       color: #b5a66b;
       margin-top: 2px;
     }
@@ -105,18 +112,18 @@
     /* Tủ trang phục 3D */
     .wardrobe-box {
       display: flex;
-      gap: 12px;
+      gap: 10px;
       background: #1b180b;
       border: 1px solid #594f23;
       border-radius: 10px;
-      padding: 10px;
-      margin-bottom: 12px;
+      padding: 9px;
+      margin-bottom: 11px;
       align-items: center;
     }
 
     #preview-3d-canvas {
-      width: 126px;
-      height: 144px;
+      width: 124px;
+      height: 156px;
       border-radius: 8px;
       background: radial-gradient(circle at center, #3f4669 0%, #191c2b 100%);
       border: 1px solid #6b5e29;
@@ -128,45 +135,50 @@
     .wardrobe-controls { flex: 1; min-width: 0; }
 
     .w-label {
-      font-size: 0.72rem;
+      font-size: 0.7rem;
       color: #d6c57a;
       margin-bottom: 5px;
       font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.4px;
     }
 
     .skin-grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 7px;
-      margin-bottom: 9px;
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 5px;
+      margin-bottom: 8px;
     }
 
     .skin-dot {
-      width: 25px;
-      height: 25px;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      max-width: 24px;
       border-radius: 50%;
       border: 2px solid rgba(255, 255, 255, 0.25);
       cursor: pointer;
       transition: transform 0.12s, border-color 0.12s;
+      margin: auto;
     }
 
     .skin-dot.selected {
       border-color: #f0da75;
-      transform: scale(1.18);
-      box-shadow: 0 0 8px rgba(240, 218, 117, 0.8);
+      transform: scale(1.2);
+      box-shadow: 0 0 8px rgba(240, 218, 117, 0.9);
     }
 
     .hat-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 5px;
+      gap: 4px;
+      max-height: 116px;
+      overflow-y: auto;
+      padding-right: 2px;
     }
 
     .hat-btn {
-      padding: 6px 4px;
-      font-size: 0.72rem;
+      padding: 5px 4px;
+      font-size: 0.7rem;
       background: #282311;
       color: #dfd4a6;
       border: 1px solid #5e5324;
@@ -174,6 +186,9 @@
       cursor: pointer;
       font-weight: 600;
       text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .hat-btn.selected {
@@ -182,29 +197,29 @@
       border-color: #fff2b2;
     }
 
-    .input-group { margin-bottom: 10px; }
-    .input-group label { display: block; font-size: 0.8rem; margin-bottom: 4px; color: #dcd09a; }
+    .input-group { margin-bottom: 9px; }
+    .input-group label { display: block; font-size: 0.79rem; margin-bottom: 4px; color: #dcd09a; }
 
-    input {
+    input[type="text"] {
       width: 100%;
-      padding: 10px 12px;
+      padding: 9px 11px;
       background: #231f0f;
       border: 1px solid #8a7b39;
       border-radius: 8px;
       color: #fff;
-      font-size: 0.95rem;
+      font-size: 0.94rem;
       outline: none;
       user-select: text;
       -webkit-user-select: text;
     }
-    input:focus { border-color: #f0da75; }
+    input[type="text"]:focus { border-color: #f0da75; }
 
     .btn {
       width: 100%;
-      padding: 11px;
+      padding: 10px;
       border: none;
       border-radius: 8px;
-      font-size: 0.94rem;
+      font-size: 0.93rem;
       font-weight: 700;
       cursor: pointer;
       transition: transform 0.1s, opacity 0.15s;
@@ -214,21 +229,21 @@
     .btn-primary { background: #e3c852; color: #171408; }
     .btn-secondary { background: #463f1e; color: #f7e699; border: 1px solid #a89545; }
     .btn-small {
-      padding: 5px 9px;
+      padding: 5px 8px;
       background: #3d3618;
       color: #f0da75;
       border: 1px solid #8a7b39;
       border-radius: 6px;
       cursor: pointer;
-      font-size: 0.76rem;
+      font-size: 0.74rem;
       font-weight: 600;
     }
 
-    .divider { text-align: center; margin: 11px 0; position: relative; }
+    .divider { text-align: center; margin: 10px 0; position: relative; }
     .divider span {
       background: #161309;
       padding: 0 10px;
-      font-size: 0.7rem;
+      font-size: 0.69rem;
       color: #9e8f53;
       position: relative;
       z-index: 1;
@@ -244,8 +259,8 @@
     .join-row input { text-transform: uppercase; text-align: center; letter-spacing: 2px; font-weight: bold; }
     .join-row .btn { width: 46%; }
 
-    .error-text { color: #ff6b6b; font-size: 0.82rem; text-align: center; margin-top: 7px; min-height: 18px; }
-    .hint-text { text-align: center; color: #bdb077; font-size: 0.84rem; margin-top: 7px; }
+    .error-text { color: #ff6b6b; font-size: 0.81rem; text-align: center; margin-top: 6px; min-height: 17px; }
+    .hint-text { text-align: center; color: #bdb077; font-size: 0.82rem; margin-top: 6px; }
 
     /* Lobby */
     .room-header {
@@ -253,13 +268,13 @@
       align-items: center;
       justify-content: space-between;
       background: #24200f;
-      padding: 8px 12px;
+      padding: 8px 11px;
       border-radius: 10px;
-      margin-bottom: 9px;
+      margin-bottom: 8px;
       border: 1px solid #6b5e29;
-      gap: 8px;
+      gap: 6px;
     }
-    .room-header strong { font-size: 1.4rem; letter-spacing: 4px; color: #f0da75; }
+    .room-header strong { font-size: 1.35rem; letter-spacing: 4px; color: #f0da75; }
 
     .setting-row {
       display: flex;
@@ -268,48 +283,125 @@
       background: #1d1a0d;
       border: 1px solid #594f23;
       border-radius: 9px;
-      padding: 7px 11px;
-      margin-bottom: 9px;
-      font-size: 0.82rem;
+      padding: 6px 10px;
+      margin-bottom: 8px;
+      font-size: 0.81rem;
     }
-    .dur-controls { display: flex; align-items: center; gap: 7px; }
-    .dur-controls strong { min-width: 64px; text-align: center; color: #f0da75; font-size: 0.92rem; }
+    .dur-controls { display: flex; align-items: center; gap: 6px; }
+    .dur-controls strong { min-width: 58px; text-align: center; color: #f0da75; font-size: 0.9rem; }
 
     .player-list-box {
       background: #1d1a0d;
       border: 1px solid #4a411d;
       border-radius: 10px;
-      padding: 9px;
-      margin-bottom: 9px;
+      padding: 8px;
+      margin-bottom: 8px;
       max-height: 145px;
       overflow-y: auto;
     }
-    .player-list-box h3 { font-size: 0.82rem; color: #d6c57a; margin-bottom: 6px; }
+    .player-list-box h3 { font-size: 0.81rem; color: #d6c57a; margin-bottom: 5px; }
     #player-list { list-style: none; display: flex; flex-direction: column; gap: 5px; }
     #player-list li {
       background: #2b2613;
-      padding: 6px 9px;
+      padding: 5px 8px;
       border-radius: 6px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 0.83rem;
+      font-size: 0.82rem;
     }
     .p-meta { display: flex; align-items: center; gap: 7px; }
-    .p-swatch { width: 13px; height: 13px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.5); }
-    .host-badge { color: #f0da75; font-size: 0.72rem; font-weight: bold; }
-    .bot-badge { color: #8bf2ea; font-size: 0.72rem; font-weight: bold; }
+    .p-swatch { width: 13px; height: 13px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.5); flex-shrink: 0; }
+    .host-badge { color: #f0da75; font-size: 0.71rem; font-weight: bold; }
+    .bot-badge { color: #8bf2ea; font-size: 0.71rem; font-weight: bold; }
 
-    .lobby-actions { display: flex; gap: 8px; margin-bottom: 9px; }
+    .lobby-actions { display: flex; gap: 8px; margin-bottom: 8px; }
 
     .rules-mini {
-      font-size: 0.74rem;
-      line-height: 1.42;
+      font-size: 0.73rem;
+      line-height: 1.4;
       color: #cfc491;
       background: rgba(227, 200, 82, 0.08);
-      padding: 8px 9px;
+      padding: 7px 9px;
       border-radius: 8px;
-      margin-bottom: 9px;
+      margin-bottom: 8px;
+    }
+
+    /* Modal Cài đặt Tốc độ quay góc nhìn */
+    .settings-panel {
+      max-width: 420px;
+      touch-action: pan-y;
+    }
+    .settings-panel h2 {
+      font-size: 1.2rem;
+      color: #f0da75;
+      text-align: center;
+      margin-bottom: 12px;
+      letter-spacing: 1px;
+    }
+    .slider-group {
+      background: #1c190c;
+      border: 1px solid #4d431e;
+      border-radius: 9px;
+      padding: 10px 12px;
+      margin-bottom: 10px;
+    }
+    .slider-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.84rem;
+      margin-bottom: 6px;
+      color: #e6dbb0;
+    }
+    .slider-head strong {
+      color: #f0da75;
+      font-size: 0.92rem;
+    }
+    input[type="range"] {
+      width: 100%;
+      accent-color: #e3c852;
+      height: 24px;
+      cursor: pointer;
+      touch-action: pan-x;
+    }
+    .preset-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .preset-btn {
+      padding: 7px 4px;
+      background: #2c2611;
+      border: 1px solid #6e6029;
+      color: #f5e6a3;
+      border-radius: 7px;
+      font-size: 0.74rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .preset-btn:active { transform: scale(0.95); }
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #1c190c;
+      border: 1px solid #4d431e;
+      border-radius: 9px;
+      padding: 9px 12px;
+      margin-bottom: 12px;
+      font-size: 0.84rem;
+    }
+    .toggle-row input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      accent-color: #e3c852;
+      cursor: pointer;
+    }
+    .settings-footer {
+      display: flex;
+      gap: 8px;
     }
 
     /* Màn hình Game 3D */
@@ -347,19 +439,8 @@
       opacity: 0;
       transition: opacity 0.12s linear;
     }
-    #blind-overlay .blind-text {
-      color: #4a3f12;
-      font-size: 1.4rem;
-      font-weight: 900;
-      letter-spacing: 2px;
-      text-align: center;
-    }
-    #blind-overlay .blind-sub {
-      color: #7c2d12;
-      font-size: 0.92rem;
-      font-weight: 700;
-      margin-top: 6px;
-    }
+    #blind-overlay .blind-text { color: #4a3f12; font-size: 1.4rem; font-weight: 900; letter-spacing: 2px; text-align: center; }
+    #blind-overlay .blind-sub { color: #7c2d12; font-size: 0.92rem; font-weight: 700; margin-top: 6px; }
 
     #caught-vignette {
       position: fixed;
@@ -382,7 +463,6 @@
       to { opacity: 0.95; }
     }
 
-    /* HUD góc trái trên (hỗ trợ vùng tai thỏ safe-area) */
     #hud {
       position: fixed;
       top: calc(8px + env(safe-area-inset-top));
@@ -392,7 +472,7 @@
       gap: 5px;
       z-index: 14;
       pointer-events: none;
-      max-width: calc(100vw - 145px - env(safe-area-inset-left) - env(safe-area-inset-right));
+      max-width: calc(100vw - 140px - env(safe-area-inset-left) - env(safe-area-inset-right));
     }
     .hud-row { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
     .hud-box {
@@ -406,15 +486,11 @@
       white-space: nowrap;
     }
     .hud-timer { font-size: 0.88rem; color: #fff; background: rgba(45, 38, 12, 0.94); }
-    .hud-timer.final-min {
-      background: rgba(165, 16, 26, 0.92);
-      border-color: #ff6b6b;
-      color: #fff;
-    }
+    .hud-timer.final-min { background: rgba(165, 16, 26, 0.92); border-color: #ff6b6b; color: #fff; }
 
-    #btn-hud-fs {
+    .hud-btn {
       pointer-events: auto;
-      background: rgba(34, 29, 12, 0.9);
+      background: rgba(34, 29, 12, 0.92);
       border: 1px solid #e3c852;
       color: #f0da75;
       padding: 4px 8px;
@@ -423,33 +499,20 @@
       font-weight: 700;
       cursor: pointer;
     }
-    #btn-hud-fs:active { transform: scale(0.94); }
+    .hud-btn:active { transform: scale(0.94); }
 
-    #hud-xray-badge {
-      background: rgba(90, 18, 25, 0.9);
-      border-color: #f87171;
-      color: #fecaca;
-    }
+    #hud-xray-badge { background: rgba(90, 18, 25, 0.9); border-color: #f87171; color: #fecaca; }
     #hud-xray-badge.active-pulse {
-      background: rgba(220, 24, 42, 0.96);
-      border-color: #fff;
-      color: #fff;
+      background: rgba(220, 24, 42, 0.96); border-color: #fff; color: #fff;
       box-shadow: 0 0 14px rgba(255, 65, 65, 0.95);
     }
 
-    #hud-item-badge {
-      background: rgba(56, 46, 8, 0.92);
-      border-color: #facc15;
-      color: #fef08a;
-    }
+    #hud-item-badge { background: rgba(56, 46, 8, 0.92); border-color: #facc15; color: #fef08a; }
     #hud-item-badge.has-item {
-      background: rgba(202, 138, 4, 0.95);
-      color: #141206;
-      border-color: #fef9c3;
+      background: rgba(202, 138, 4, 0.95); color: #141206; border-color: #fef9c3;
       box-shadow: 0 0 12px rgba(250, 204, 21, 0.7);
     }
 
-    /* Minimap góc phải trên (sạch sẽ, không bị bất kỳ chữ nào đè lên) */
     #minimap-canvas {
       position: fixed;
       top: calc(8px + env(safe-area-inset-top));
@@ -465,8 +528,7 @@
 
     #pc-lock-hint {
       position: fixed;
-      top: 50%;
-      left: 50%;
+      top: 50%; left: 50%;
       transform: translate(-50%, 34px);
       background: rgba(16, 14, 6, 0.88);
       border: 1px solid #c7b152;
@@ -479,7 +541,6 @@
       text-align: center;
     }
 
-    /* Gợi ý xoay góc nhìn tạm thời ở đáy màn hình (tự ẩn sau vài giây) */
     #mobile-swipe-tip {
       position: fixed;
       bottom: calc(18px + env(safe-area-inset-bottom));
@@ -545,7 +606,7 @@
     #rescue-prompt { background: rgba(22, 163, 74, 0.95); }
     #flash-prompt { background: rgba(202, 138, 4, 0.95); color: #171408; }
 
-    /* Điều khiển cảm ứng Điện thoại & iPad (bố cục cánh cung không đụng Minimap) */
+    /* Điều khiển cảm ứng Điện thoại & iPad */
     #mobile-controls {
       position: fixed;
       inset: 0;
@@ -601,7 +662,6 @@
     #btn-mobile-rescue.ready { opacity: 1; box-shadow: 0 0 26px rgba(34, 197, 94, 0.95); }
     #btn-mobile-rescue:active { transform: scale(0.92); }
 
-    /* Đặt nút ĐÈN bên trái nút CỨU để không bao giờ leo lên đụng Minimap */
     #btn-mobile-flash {
       position: fixed;
       bottom: calc(24px + env(safe-area-inset-bottom));
@@ -628,8 +688,9 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 35;
+      z-index: 40;
       padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+      overflow-y: auto;
     }
 
     .results-list {
@@ -657,55 +718,50 @@
 
     .hidden { display: none !important; }
 
-    /* =====================================================================
-       TỐI ƯU RIÊNG CHO ĐIỆN THOẠI MÀN HÌNH NGANG (LANDSCAPE)
-       ===================================================================== */
+    /* Tối ưu cho điện thoại xoay ngang */
     @media (max-height: 520px) and (orientation: landscape) {
       .panel.menu-panel, .panel.lobby-panel {
-        max-width: min(94vw, 760px);
-        padding: 12px 16px;
+        max-width: min(95vw, 780px);
+        padding: 11px 14px;
       }
-      .title { font-size: 1.25rem; }
-      .subtitle { font-size: 0.68rem; }
-      .panel-top { margin-bottom: 8px; }
+      .title { font-size: 1.18rem; padding: 0 92px; }
+      .subtitle { font-size: 0.65rem; }
+      .panel-top { margin-bottom: 7px; }
 
       .menu-body, .lobby-body {
         display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 12px;
+        grid-template-columns: 1.12fr 0.88fr;
+        gap: 11px;
         align-items: start;
       }
-      .wardrobe-box { margin-bottom: 0; padding: 8px; }
-      #preview-3d-canvas { width: 104px; height: 122px; }
-      .player-list-box { max-height: 112px; margin-bottom: 7px; }
-      .rules-mini { font-size: 0.7rem; padding: 6px 8px; margin-bottom: 7px; }
-      .divider { margin: 8px 0; }
-      .input-group { margin-bottom: 8px; }
-      input { padding: 8px 10px; font-size: 0.88rem; }
-      .btn { padding: 9px; font-size: 0.88rem; }
+      .wardrobe-box { margin-bottom: 0; padding: 7px; }
+      #preview-3d-canvas { width: 102px; height: 132px; }
+      .hat-grid { max-height: 86px; }
+      .player-list-box { max-height: 108px; margin-bottom: 6px; }
+      .rules-mini { font-size: 0.68rem; padding: 5px 7px; margin-bottom: 6px; }
+      .divider { margin: 7px 0; }
+      .input-group { margin-bottom: 7px; }
+      input[type="text"] { padding: 7px 10px; font-size: 0.86rem; }
+      .btn { padding: 8px; font-size: 0.86rem; }
 
-      /* HUD & Minimap gọn đẹp trên điện thoại xoay ngang */
       #hud {
         top: calc(6px + env(safe-area-inset-top));
         left: calc(10px + env(safe-area-inset-left));
         gap: 4px;
       }
-      .hud-box, #btn-hud-fs { padding: 3px 7px; font-size: 0.7rem; }
-      .hud-timer { font-size: 0.78rem; }
+      .hud-box, .hud-btn { padding: 3px 7px; font-size: 0.69rem; }
+      .hud-timer { font-size: 0.77rem; }
       #minimap-canvas {
-        width: 90px;
-        height: 90px;
+        width: 88px; height: 88px;
         top: calc(6px + env(safe-area-inset-top));
         right: calc(10px + env(safe-area-inset-right));
       }
-      #toast-container { top: calc(52px + env(safe-area-inset-top)); }
+      #toast-container { top: calc(50px + env(safe-area-inset-top)); }
 
-      /* Joystick & nút hành động vừa tầm ngón cái */
       #joystick-zone {
         bottom: calc(8px + env(safe-area-inset-bottom));
         left: calc(16px + env(safe-area-inset-left));
-        width: 118px;
-        height: 118px;
+        width: 118px; height: 118px;
       }
       #joystick-base { width: 96px; height: 96px; }
       #joystick-knob { width: 42px; height: 42px; }
@@ -713,37 +769,29 @@
       #btn-mobile-rescue {
         bottom: calc(12px + env(safe-area-inset-bottom));
         right: calc(16px + env(safe-area-inset-right));
-        width: 70px;
-        height: 70px;
-        font-size: 1.05rem;
+        width: 70px; height: 70px; font-size: 1.05rem;
       }
       #btn-mobile-flash {
         bottom: calc(16px + env(safe-area-inset-bottom));
         right: calc(96px + env(safe-area-inset-right));
-        width: 64px;
-        height: 64px;
-        font-size: 0.8rem;
+        width: 64px; height: 64px; font-size: 0.8rem;
       }
     }
 
-    /* =====================================================================
-       TỐI ƯU RIÊNG CHO IPAD & MÁY TÍNH BẢNG
-       ===================================================================== */
+    /* Tối ưu cho iPad & Máy tính bảng */
     @media (min-width: 768px) and (min-height: 600px) {
       #minimap-canvas {
-        width: 138px;
-        height: 138px;
+        width: 138px; height: 138px;
         top: calc(12px + env(safe-area-inset-top));
         right: calc(14px + env(safe-area-inset-right));
       }
-      .hud-box, #btn-hud-fs { padding: 6px 11px; font-size: 0.84rem; }
+      .hud-box, .hud-btn { padding: 6px 11px; font-size: 0.84rem; }
       .hud-timer { font-size: 0.96rem; }
 
       #joystick-zone {
         bottom: calc(28px + env(safe-area-inset-bottom));
         left: calc(28px + env(safe-area-inset-left));
-        width: 162px;
-        height: 162px;
+        width: 162px; height: 162px;
       }
       #joystick-base { width: 132px; height: 132px; }
       #joystick-knob { width: 58px; height: 58px; }
@@ -751,16 +799,12 @@
       #btn-mobile-rescue {
         bottom: calc(32px + env(safe-area-inset-bottom));
         right: calc(30px + env(safe-area-inset-right));
-        width: 94px;
-        height: 94px;
-        font-size: 1.32rem;
+        width: 94px; height: 94px; font-size: 1.32rem;
       }
       #btn-mobile-flash {
         bottom: calc(38px + env(safe-area-inset-bottom));
         right: calc(140px + env(safe-area-inset-right));
-        width: 84px;
-        height: 84px;
-        font-size: 1rem;
+        width: 84px; height: 84px; font-size: 1rem;
       }
     }
   </style>
@@ -772,18 +816,21 @@
     <div class="panel menu-panel">
       <div class="panel-top">
         <h1 class="title">THE BACKROOMS 3D</h1>
-        <p class="subtitle">MÊ CUNG NGẪU NHIÊN 35&times;35 &bull; TỐI ĐA 20 NGƯỜI &bull; ĐÈN PIN CHÓI</p>
-        <button id="btn-menu-fs" type="button" class="btn-fs-corner">⛶ Full</button>
+        <p class="subtitle">MÊ CUNG NGẪU NHIÊN 35&times;35 &bull; 20 NGƯỜI &bull; 16 MÀU &amp; 8 PHỤ KIỆN</p>
+        <div class="top-corner-btns">
+          <button id="btn-menu-settings" type="button" class="btn-corner">⚙️</button>
+          <button id="btn-menu-fs" type="button" class="btn-corner">⛶ Full</button>
+        </div>
       </div>
 
       <div class="menu-body">
         <div class="wardrobe-box">
-          <canvas id="preview-3d-canvas" width="264" height="304"></canvas>
+          <canvas id="preview-3d-canvas" width="248" height="312"></canvas>
           <div class="wardrobe-controls">
-            <div class="w-label">Màu Skin Nhân Vật</div>
+            <div class="w-label">Màu Skin (16 Màu)</div>
             <div id="menu-skin-grid" class="skin-grid"></div>
 
-            <div class="w-label">Chọn Nón (Đội / Bỏ)</div>
+            <div class="w-label">Phụ kiện Đầu / Mặt</div>
             <div id="menu-hat-grid" class="hat-grid"></div>
           </div>
         </div>
@@ -815,8 +862,9 @@
       <div class="room-header">
         <span>MÃ PHÒNG:</span>
         <strong id="lobby-room-code">----</strong>
-        <div style="display:flex; gap:6px;">
+        <div style="display:flex; gap:5px;">
           <button id="btn-copy-code" class="btn-small">Sao chép</button>
+          <button id="btn-lobby-settings" class="btn-small">⚙️</button>
           <button id="btn-lobby-fs" class="btn-small">⛶ Full</button>
         </div>
       </div>
@@ -832,10 +880,10 @@
             </div>
           </div>
 
-          <div class="wardrobe-box" style="padding:8px; margin-bottom:9px;">
+          <div class="wardrobe-box" style="padding:8px; margin-bottom:8px;">
             <div class="wardrobe-controls">
               <div class="w-label">Trang phục của bạn</div>
-              <div id="lobby-skin-grid" class="skin-grid" style="margin-bottom:7px;"></div>
+              <div id="lobby-skin-grid" class="skin-grid" style="margin-bottom:6px;"></div>
               <div id="lobby-hat-grid" class="hat-grid"></div>
             </div>
           </div>
@@ -852,8 +900,8 @@
           </div>
 
           <div id="host-bot-controls" class="lobby-actions hidden">
-            <button id="btn-add-bot" class="btn btn-secondary" style="padding:8px; font-size:0.82rem;">+ Thêm Bot (Test)</button>
-            <button id="btn-clear-bots" class="btn btn-secondary" style="padding:8px; font-size:0.82rem; width:40%;">Xóa Bot</button>
+            <button id="btn-add-bot" class="btn btn-secondary" style="padding:8px; font-size:0.81rem;">+ Thêm Bot (Test)</button>
+            <button id="btn-clear-bots" class="btn btn-secondary" style="padding:8px; font-size:0.81rem; width:40%;">Xóa Bot</button>
           </div>
 
           <button id="btn-start-game" class="btn btn-primary hidden">Bắt Đầu Game (3D FPS)</button>
@@ -878,7 +926,8 @@
 
     <div id="hud">
       <div class="hud-row">
-        <button id="btn-hud-fs" type="button" title="Toàn màn hình">⛶ Full</button>
+        <button id="btn-hud-fs" type="button" class="hud-btn" title="Toàn màn hình">⛶ Full</button>
+        <button id="btn-hud-settings" type="button" class="hud-btn" title="Cài đặt độ nhạy">⚙️</button>
         <div class="hud-box hud-timer" id="hud-timer">00:00</div>
         <div class="hud-box" id="hud-role">Vai trò: ---</div>
       </div>
@@ -921,9 +970,50 @@
     </div>
   </div>
 
+  <!-- MODAL CÀI ĐẶT TỐC ĐỘ QUAY GÓC NHÌN (DÙNG CHUNG CHO MENU / LOBBY / IN-GAME) -->
+  <div id="settings-overlay" class="overlay hidden">
+    <div class="panel settings-panel">
+      <h2>⚙️ CÀI ĐẶT TỐC ĐỘ XOAY</h2>
+
+      <div class="slider-group">
+        <div class="slider-head">
+          <span>📱 Xoay cảm ứng (Android / iPad)</span>
+          <strong id="val-touch-sens">1.00x</strong>
+        </div>
+        <input id="slider-touch-sens" type="range" min="0.2" max="3.0" step="0.05" value="1.0" />
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-head">
+          <span>🖱️ Xoay chuột &amp; mũi tên (PC)</span>
+          <strong id="val-mouse-sens">1.00x</strong>
+        </div>
+        <input id="slider-mouse-sens" type="range" min="0.2" max="3.0" step="0.05" value="1.0" />
+      </div>
+
+      <div class="w-label" style="margin-bottom:5px;">Chọn nhanh độ nhạy cảm ứng</div>
+      <div class="preset-row">
+        <button type="button" class="preset-btn" data-touch="0.7" data-mouse="0.8">iPad<br>0.7x</button>
+        <button type="button" class="preset-btn" data-touch="1.0" data-mouse="1.0">Chuẩn<br>1.0x</button>
+        <button type="button" class="preset-btn" data-touch="1.55" data-mouse="1.45">Nhanh<br>1.55x</button>
+        <button type="button" class="preset-btn" data-touch="2.2" data-mouse="2.0">Siêu nhanh<br>2.2x</button>
+      </div>
+
+      <label class="toggle-row">
+        <span>🔄 Đảo ngược kéo lên / xuống</span>
+        <input id="chk-invert-y" type="checkbox" />
+      </label>
+
+      <div class="settings-footer">
+        <button id="btn-reset-settings" type="button" class="btn btn-secondary" style="width:42%;">Mặc định</button>
+        <button id="btn-close-settings" type="button" class="btn btn-primary">Lưu &amp; Đóng</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // =========================================================================
-    // 1. CẤU HÌNH CHUNG & DANH SÁCH TRANG PHỤC (SKIN + NÓN)
+    // 1. CẤU HÌNH CHUNG, BẢNG 16 MÀU SKIN, 8 PHỤ KIỆN & CÀI ĐẶT ĐỘ NHẠY
     // =========================================================================
     const MAX_PLAYERS = 20;
     const MAP_SIZE = 35;
@@ -946,33 +1036,139 @@
 
     const SEEKER_SPEED = 236;
     const HIDER_SPEED = 206;
-    const ROOM_PREFIX = 'br35v3-';
+    const ROOM_PREFIX = 'br35v4-';
 
+    // 16 màu Skin đa dạng (tránh màu đỏ đậm để dễ phân biệt Người Bắt)
     const SKINS = [
-      { id: 'white',  name: 'Trắng Gốc',  hex: 0xf1f3f8, css: '#f1f3f8' },
-      { id: 'black',  name: 'Đen Huyền',  hex: 0x262933, css: '#262933' },
-      { id: 'cyan',   name: 'Xanh Neon',  hex: 0x22d3ee, css: '#22d3ee' },
-      { id: 'yellow', name: 'Vàng Bảo Hộ',hex: 0xfacc15, css: '#facc15' },
-      { id: 'purple', name: 'Tím Mộng',   hex: 0xa855f7, css: '#a855f7' },
-      { id: 'pink',   name: 'Hồng Đào',   hex: 0xf472b6, css: '#f472b6' },
-      { id: 'green',  name: 'Xanh Lá',    hex: 0x34d399, css: '#34d399' }
+      { id: 'white',   name: 'Trắng Gốc',    hex: 0xf1f3f8, css: '#f1f3f8' },
+      { id: 'silver',  name: 'Bạc Khói',     hex: 0x94a3b8, css: '#94a3b8' },
+      { id: 'black',   name: 'Đen Huyền',    hex: 0x262933, css: '#262933' },
+      { id: 'navy',    name: 'Xanh Hoàng Gia',hex: 0x1e3a8a, css: '#1e3a8a' },
+      { id: 'blue',    name: 'Xanh Dương',   hex: 0x3b82f6, css: '#3b82f6' },
+      { id: 'cyan',    name: 'Xanh Neon',    hex: 0x22d3ee, css: '#22d3ee' },
+      { id: 'teal',    name: 'Xanh Ngọc',    hex: 0x14b8a6, css: '#14b8a6' },
+      { id: 'green',   name: 'Xanh Lá',      hex: 0x22c55e, css: '#22c55e' },
+      { id: 'lime',    name: 'Xanh Chanh',   hex: 0xa3e635, css: '#a3e635' },
+      { id: 'yellow',  name: 'Vàng Tươi',    hex: 0xfacc15, css: '#facc15' },
+      { id: 'gold',    name: 'Vàng Đồng',    hex: 0xd97706, css: '#d97706' },
+      { id: 'orange',  name: 'Cam Rực',      hex: 0xfb923c, css: '#fb923c' },
+      { id: 'coral',   name: 'Hồng San Hô',  hex: 0xfb7185, css: '#fb7185' },
+      { id: 'pink',    name: 'Hồng Đào',     hex: 0xf472b6, css: '#f472b6' },
+      { id: 'purple',  name: 'Tím Mộng',     hex: 0xa855f7, css: '#a855f7' },
+      { id: 'brown',   name: 'Nâu Đất',      hex: 0x78350f, css: '#78350f' }
     ];
 
     const HATS = [
-      { id: 'none',   name: 'Không đội' },
-      { id: 'hutao',  name: 'Nón Hoa Mai' },
-      { id: 'helmet', name: 'Mũ Bảo Hộ' },
-      { id: 'crown',  name: 'Vương Miện' }
+      { id: 'none',     name: 'Không đội' },
+      { id: 'hutao',    name: 'Nón Hutao' },
+      { id: 'furina',   name: 'Nón Furina' },
+      { id: 'obito',    name: 'Mặt mạ Obito' },
+      { id: 'mahoraga', name: 'Vòng Mahoraga' },
+      { id: 'gojo',     name: 'Tóc Gojo' },
+      { id: 'helmet',   name: 'Mũ Bảo Hộ' },
+      { id: 'crown',    name: 'Vương Miện' }
     ];
 
-    let myCosmetics = { skin: 'white', hat: 'hutao' };
+    // Đọc & lưu cài đặt độ nhạy + trang phục vào bộ nhớ trình duyệt
+    let userSettings = { touchSens: 1.0, mouseSens: 1.0, invertY: false };
+    let myCosmetics = { skin: 'white', hat: 'furina' };
+
+    try {
+      const savedSet = JSON.parse(localStorage.getItem('br3d_settings') || 'null');
+      if (savedSet) {
+        userSettings.touchSens = Math.max(0.2, Math.min(3.0, Number(savedSet.touchSens) || 1.0));
+        userSettings.mouseSens = Math.max(0.2, Math.min(3.0, Number(savedSet.mouseSens) || 1.0));
+        userSettings.invertY = !!savedSet.invertY;
+      }
+      const savedCos = JSON.parse(localStorage.getItem('br3d_cosmetics') || 'null');
+      if (savedCos) {
+        if (SKINS.some(s => s.id === savedCos.skin)) myCosmetics.skin = savedCos.skin;
+        if (HATS.some(h => h.id === savedCos.hat)) myCosmetics.hat = savedCos.hat;
+      }
+      const savedName = localStorage.getItem('br3d_name');
+      if (savedName) document.getElementById('player-name').value = savedName;
+    } catch (e) {}
+
+    function persistSettings() {
+      try { localStorage.setItem('br3d_settings', JSON.stringify(userSettings)); } catch (e) {}
+    }
+    function persistCosmetics() {
+      try { localStorage.setItem('br3d_cosmetics', JSON.stringify(myCosmetics)); } catch (e) {}
+    }
+
     function getSkinInfo(id) { return SKINS.find(s => s.id === id) || SKINS[0]; }
     function formatClock(sec) {
       const s = Math.max(0, Math.ceil(sec));
       return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
     }
 
-    // Quản lý chế độ Toàn Màn Hình cho Android, iPad, PC
+    // UI Modal Cài đặt Tốc độ quay
+    const settingsOverlay = document.getElementById('settings-overlay');
+    const sliderTouchSens = document.getElementById('slider-touch-sens');
+    const sliderMouseSens = document.getElementById('slider-mouse-sens');
+    const valTouchSens = document.getElementById('val-touch-sens');
+    const valMouseSens = document.getElementById('val-mouse-sens');
+    const chkInvertY = document.getElementById('chk-invert-y');
+
+    function syncSettingsUI() {
+      sliderTouchSens.value = userSettings.touchSens;
+      sliderMouseSens.value = userSettings.mouseSens;
+      valTouchSens.textContent = userSettings.touchSens.toFixed(2) + 'x';
+      valMouseSens.textContent = userSettings.mouseSens.toFixed(2) + 'x';
+      chkInvertY.checked = userSettings.invertY;
+    }
+    syncSettingsUI();
+
+    function openSettingsModal(e) {
+      if (e) e.stopPropagation();
+      if (document.pointerLockElement) document.exitPointerLock();
+      syncSettingsUI();
+      settingsOverlay.classList.remove('hidden');
+    }
+
+    function closeSettingsModal() {
+      persistSettings();
+      settingsOverlay.classList.add('hidden');
+      updateLockHint();
+    }
+
+    ['btn-menu-settings', 'btn-lobby-settings', 'btn-hud-settings'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('click', openSettingsModal);
+    });
+
+    sliderTouchSens.addEventListener('input', () => {
+      userSettings.touchSens = Number(sliderTouchSens.value);
+      valTouchSens.textContent = userSettings.touchSens.toFixed(2) + 'x';
+      persistSettings();
+    });
+    sliderMouseSens.addEventListener('input', () => {
+      userSettings.mouseSens = Number(sliderMouseSens.value);
+      valMouseSens.textContent = userSettings.mouseSens.toFixed(2) + 'x';
+      persistSettings();
+    });
+    chkInvertY.addEventListener('change', () => {
+      userSettings.invertY = chkInvertY.checked;
+      persistSettings();
+    });
+
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        userSettings.touchSens = Number(btn.dataset.touch);
+        userSettings.mouseSens = Number(btn.dataset.mouse);
+        syncSettingsUI();
+        persistSettings();
+      });
+    });
+
+    document.getElementById('btn-reset-settings').addEventListener('click', () => {
+      userSettings = { touchSens: 1.0, mouseSens: 1.0, invertY: false };
+      syncSettingsUI();
+      persistSettings();
+    });
+    document.getElementById('btn-close-settings').addEventListener('click', closeSettingsModal);
+
+    // Quản lý Toàn Màn Hình
     function isInFullscreen() {
       return !!(document.fullscreenElement || document.webkitFullscreenElement);
     }
@@ -1226,7 +1422,7 @@
     }
 
     // =========================================================================
-    // 3. MÔ HÌNH 3D NHÂN VẬT, NÓN HOA MAI, ĐÈN PIN & BÓNG THẤU THỊ
+    // 3. MÔ HÌNH 3D NHÂN VẬT + 7 PHỤ KIỆN (HU TAO, FURINA, OBITO, MAHORAGA, GOJO...)
     // =========================================================================
     function createTalismanTexture() {
       const c = document.createElement('canvas'); c.width = 128; c.height = 160;
@@ -1247,6 +1443,53 @@
     }
     const talismanTex = createTalismanTexture();
 
+    // Họa tiết xoắn ốc cam-đen đặc trưng của Mặt nạ Obito
+    function createObitoMaskTexture() {
+      const c = document.createElement('canvas'); c.width = 256; c.height = 256;
+      const g = c.getContext('2d');
+      const cx = 94, cy = 112; // Vị trí lỗ mắt phải (bên trái khi nhìn trực diện)
+
+      // Nền cam bóng với đổ khối nhẹ
+      const bg = g.createRadialGradient(120, 100, 15, 128, 128, 140);
+      bg.addColorStop(0, '#ff8547');
+      bg.addColorStop(0.55, '#eb6328');
+      bg.addColorStop(1, '#b83e12');
+      g.fillStyle = bg;
+      g.fillRect(0, 0, 256, 256);
+
+      // Các đường rãnh xoắn ốc đen tỏa ra từ lỗ mắt
+      g.strokeStyle = '#1a0c06';
+      g.lineCap = 'round';
+      const arms = 9;
+      for (let i = 0; i < arms; i++) {
+        const baseAng = (i / arms) * Math.PI * 2;
+        g.lineWidth = 4.2;
+        g.beginPath();
+        for (let t = 0; t <= 1; t += 0.04) {
+          const r = 18 + t * 145;
+          const a = baseAng + t * 2.35;
+          const x = cx + Math.cos(a) * r;
+          const y = cy + Math.sin(a) * r * 1.08;
+          if (t === 0) g.moveTo(x, y);
+          else g.lineTo(x, y);
+        }
+        g.stroke();
+      }
+
+      // Lỗ mắt tròn tối sâu + ánh đỏ nhẹ bên trong
+      g.fillStyle = '#0c0908';
+      g.beginPath(); g.arc(cx, cy, 18, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = '#5c1f0a'; g.lineWidth = 3;
+      g.stroke();
+      g.fillStyle = '#dc2626';
+      g.beginPath(); g.arc(cx, cy, 5, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#090909';
+      g.beginPath(); g.arc(cx, cy, 2, 0, Math.PI * 2); g.fill();
+
+      return new THREE.CanvasTexture(c);
+    }
+    const obitoMaskTex = createObitoMaskTexture();
+
     function createPlumBlossom(scale = 1) {
       const flower = new THREE.Group();
       const petalMat = new THREE.MeshStandardMaterial({ color: 0xd93829, roughness: 0.45 });
@@ -1264,30 +1507,34 @@
       return flower;
     }
 
-    function buildHatMesh(hatId) {
+    // Mọi phụ kiện gắn theo tâm đầu (0, 1.54, 0) của nhân vật (hướng mặt là -Z)
+    function buildAccessoryMesh(hatId) {
       const g = new THREE.Group();
+
       if (hatId === 'hutao') {
+        const h = new THREE.Group();
+        h.position.y = 0.17;
         const darkMat = new THREE.MeshStandardMaterial({ color: 0x22262d, roughness: 0.55, metalness: 0.12 });
         const brimMat = new THREE.MeshStandardMaterial({ color: 0x2b313a, roughness: 0.5, metalness: 0.15 });
         const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.46, 0.10, 24), brimMat);
-        brim.position.y = 0.02; g.add(brim);
+        brim.position.y = 0.02; h.add(brim);
         const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.31, 0.33, 0.21, 24), darkMat);
-        crown.position.y = 0.16; g.add(crown);
+        crown.position.y = 0.16; h.add(crown);
         const topDome = new THREE.Mesh(new THREE.SphereGeometry(0.31, 24, 12, 0, Math.PI * 2, 0, Math.PI * 0.35), darkMat);
-        topDome.scale.set(1, 0.32, 1); topDome.position.y = 0.24; g.add(topDome);
+        topDome.scale.set(1, 0.32, 1); topDome.position.y = 0.24; h.add(topDome);
 
         const talisman = new THREE.Mesh(
           new THREE.PlaneGeometry(0.24, 0.30),
           new THREE.MeshStandardMaterial({ map: talismanTex, transparent: true, alphaTest: 0.2, side: THREE.DoubleSide, roughness: 0.5 })
         );
         talisman.position.set(0, 0.19, -0.345); talisman.rotation.x = -0.14; talisman.rotation.y = Math.PI;
-        g.add(talisman);
+        h.add(talisman);
 
         const twig = new THREE.Mesh(
           new THREE.CylinderGeometry(0.012, 0.015, 0.28, 8),
           new THREE.MeshStandardMaterial({ color: 0x5c3a21, roughness: 0.7 })
         );
-        twig.position.set(-0.33, 0.20, -0.05); twig.rotation.z = 0.35; g.add(twig);
+        twig.position.set(-0.33, 0.20, -0.05); twig.rotation.z = 0.35; h.add(twig);
 
         [
           { pos: [-0.35, 0.24, -0.04], rotY: -Math.PI / 2, sc: 1.05 },
@@ -1296,26 +1543,210 @@
           { pos: [-0.23, 0.11, -0.27], rotY: -Math.PI * 0.78, sc: 0.48 }
         ].forEach(f => {
           const fl = createPlumBlossom(f.sc);
-          fl.position.set(...f.pos); fl.rotation.y = f.rotY; g.add(fl);
+          fl.position.set(...f.pos); fl.rotation.y = f.rotY; h.add(fl);
         });
+        g.add(h);
+
+      } else if (hatId === 'furina') {
+        // Nón chóp xanh Furina nghiêng sang chảnh + vương miện vàng + ngọc giọt nước + dải lông vũ trắng
+        const h = new THREE.Group();
+        h.position.set(0.04, 0.19, 0.0);
+        h.rotation.z = -0.18;
+        h.rotation.x = 0.07;
+
+        const blueMain = new THREE.MeshStandardMaterial({ color: 0x2236a8, roughness: 0.45, metalness: 0.12 });
+        const blueDark = new THREE.MeshStandardMaterial({ color: 0x16226b, roughness: 0.55 });
+        const whiteMat = new THREE.MeshStandardMaterial({ color: 0xf1f5fc, roughness: 0.4 });
+        const goldMat = new THREE.MeshStandardMaterial({ color: 0xdcc296, roughness: 0.28, metalness: 0.68 });
+        const gemMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0ea5e9, emissiveIntensity: 0.5, roughness: 0.15 });
+
+        // Vành mũ xanh đậm + viền trắng
+        const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.41, 0.045, 24), blueDark);
+        brim.position.y = 0.01; h.add(brim);
+
+        // Chóp mũ cao hơi loe ở đỉnh
+        const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.285, 0.235, 0.33, 24), blueMain);
+        crown.position.y = 0.18; h.add(crown);
+
+        // Dải ruy-băng trắng quanh chân mũ
+        const band = new THREE.Mesh(new THREE.CylinderGeometry(0.252, 0.242, 0.042, 24), whiteMat);
+        band.position.y = 0.085; h.add(band);
+
+        // Vòng vương miện vàng & giọt nước xanh quanh đỉnh mũ
+        const rimRing = new THREE.Mesh(new THREE.TorusGeometry(0.282, 0.016, 10, 28), goldMat);
+        rimRing.rotation.x = Math.PI / 2; rimRing.position.y = 0.33; h.add(rimRing);
+
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2 - Math.PI / 2;
+          const r = 0.285;
+          const sp = new THREE.Group();
+          sp.position.set(Math.cos(a) * r, 0.33, Math.sin(a) * r);
+          sp.rotation.y = -a + Math.PI / 2;
+
+          // Mũi vương miện nhọn + vòng tròn vàng trên đỉnh
+          const diamond = new THREE.Mesh(new THREE.ConeGeometry(0.042, 0.15, 4), goldMat);
+          diamond.position.y = 0.05; sp.add(diamond);
+          const loop = new THREE.Mesh(new THREE.TorusGeometry(0.036, 0.011, 8, 14), goldMat);
+          loop.position.y = 0.135; sp.add(loop);
+          const pearl = new THREE.Mesh(new THREE.SphereGeometry(0.024, 10, 8), goldMat);
+          pearl.position.y = 0.18; sp.add(pearl);
+
+          // Giọt nước pha lê xanh xen kẽ
+          const gem = new THREE.Mesh(new THREE.SphereGeometry(0.026, 10, 8), gemMat);
+          gem.scale.set(0.85, 1.35, 0.65);
+          gem.position.set(0.085, -0.06, 0.015);
+          sp.add(gem);
+          h.add(sp);
+        }
+
+        // Nơ xanh & dải lông vũ trắng rủ xuống bên hông mũ
+        const bowGroup = new THREE.Group();
+        bowGroup.position.set(-0.30, 0.07, -0.05);
+        bowGroup.rotation.y = -Math.PI / 2;
+        const bowL = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.08, 0.04), blueMain);
+        bowL.position.set(-0.06, 0.01, 0); bowL.rotation.z = 0.25;
+        const bowR = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.08, 0.04), blueMain);
+        bowR.position.set(0.06, 0.01, 0); bowR.rotation.z = -0.25;
+        const bowGem = new THREE.Mesh(new THREE.SphereGeometry(0.028, 10, 8), gemMat);
+        bowGem.scale.set(0.9, 1.3, 0.8); bowGem.position.z = 0.025;
+        bowGroup.add(bowL, bowR, bowGem);
+
+        // Chùm lông vũ trắng rủ xuống mềm mại
+        for (let k = 0; k < 5; k++) {
+          const feather = new THREE.Mesh(new THREE.SphereGeometry(0.055 - k * 0.008, 10, 8), whiteMat);
+          feather.scale.set(0.95, 1.35, 0.35);
+          feather.position.set(0.02 * k, -0.07 - k * 0.075, -0.01);
+          feather.rotation.z = 0.18 + k * 0.05;
+          bowGroup.add(feather);
+        }
+        h.add(bowGroup);
+        g.add(h);
+
+      } else if (hatId === 'obito') {
+        // Mặt nạ xoắn ốc cam Obito ôm sát phía trước mặt (-Z)
+        const maskGeo = new THREE.SphereGeometry(0.228, 28, 22, 0, Math.PI, 0, Math.PI);
+        const maskMat = new THREE.MeshStandardMaterial({
+          map: obitoMaskTex, roughness: 0.28, metalness: 0.08, side: THREE.DoubleSide
+        });
+        const mask = new THREE.Mesh(maskGeo, maskMat);
+        mask.rotation.y = Math.PI; // Quay mặt trước ra hướng -Z
+        mask.scale.set(0.98, 1.13, 0.68);
+        mask.position.set(0, 0.0, -0.075);
+        g.add(mask);
+
+        // Dây đeo đen vòng ra sau đầu
+        const strap = new THREE.Mesh(
+          new THREE.TorusGeometry(0.205, 0.012, 8, 24),
+          new THREE.MeshStandardMaterial({ color: 0x161618, roughness: 0.8 })
+        );
+        strap.rotation.x = Math.PI / 2;
+        strap.position.set(0, 0.01, 0.0);
+        g.add(strap);
+
+      } else if (hatId === 'mahoraga') {
+        // Vòng Pháp Luân 8 nan vàng ánh kim lơ lửng phía trên đầu (tự xoay)
+        const wheelHolder = new THREE.Group();
+        wheelHolder.position.set(0, 0.44, 0.05);
+        wheelHolder.rotation.x = Math.PI / 2 - 0.18;
+
+        const wheel = new THREE.Group();
+        const goldMat = new THREE.MeshStandardMaterial({
+          color: 0xd4c372, roughness: 0.28, metalness: 0.72, emissive: 0x332b08, emissiveIntensity: 0.35
+        });
+
+        const outerRing = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.025, 12, 32), goldMat);
+        wheel.add(outerRing);
+
+        const hub = new THREE.Mesh(new THREE.SphereGeometry(0.072, 14, 12), goldMat);
+        wheel.add(hub);
+
+        for (let i = 0; i < 8; i++) {
+          const ang = (i / 8) * Math.PI * 2;
+          const spoke = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.46, 8), goldMat);
+          spoke.position.set(Math.cos(ang) * 0.23, Math.sin(ang) * 0.23, 0);
+          spoke.rotation.z = ang - Math.PI / 2;
+          wheel.add(spoke);
+
+          const orb = new THREE.Mesh(new THREE.SphereGeometry(0.066, 12, 10), goldMat);
+          orb.position.set(Math.cos(ang) * 0.48, Math.sin(ang) * 0.48, 0);
+          wheel.add(orb);
+        }
+
+        wheelHolder.add(wheel);
+        g.add(wheelHolder);
+        g.userData.spinWheel = wheel;
+
+      } else if (hatId === 'gojo') {
+        // Khăn bịt mắt đen Gojo
+        const clothMat = new THREE.MeshStandardMaterial({ color: 0x16181f, roughness: 0.85, metalness: 0.05 });
+        const blindfold = new THREE.Mesh(new THREE.CylinderGeometry(0.228, 0.220, 0.148, 24), clothMat);
+        blindfold.scale.set(0.97, 1.0, 0.99);
+        blindfold.position.set(0, 0.035, 0);
+        g.add(blindfold);
+
+        // Mái tóc trắng ánh xanh băng dựng nhọn nhiều lớp
+        const hairMat = new THREE.MeshStandardMaterial({
+          color: 0xe6f6ff, emissive: 0x183d54, emissiveIntensity: 0.28, roughness: 0.48
+        });
+        const hairCap = new THREE.Mesh(
+          new THREE.SphereGeometry(0.22, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.46),
+          hairMat
+        );
+        hairCap.position.set(0, 0.04, 0);
+        g.add(hairCap);
+
+        // Lớp tóc dựng vành ngoài (12 chỏm nhọn tỏa lên)
+        for (let i = 0; i < 12; i++) {
+          const a = (i / 12) * Math.PI * 2;
+          const hLen = 0.22 + (i % 3) * 0.045;
+          const spike = new THREE.Mesh(new THREE.ConeGeometry(0.072, hLen, 7), hairMat);
+          spike.position.set(Math.cos(a) * 0.17, 0.22, Math.sin(a) * 0.17);
+          spike.rotation.z = -Math.cos(a) * 0.52;
+          spike.rotation.x = Math.sin(a) * 0.52;
+          g.add(spike);
+        }
+        // Lớp tóc dựng đỉnh đầu (7 chỏm cao vút)
+        for (let i = 0; i < 7; i++) {
+          const a = (i / 7) * Math.PI * 2 + 0.3;
+          const hLen = 0.27 + (i % 2) * 0.05;
+          const spike = new THREE.Mesh(new THREE.ConeGeometry(0.076, hLen, 7), hairMat);
+          spike.position.set(Math.cos(a) * 0.085, 0.29, Math.sin(a) * 0.085);
+          spike.rotation.z = -Math.cos(a) * 0.24;
+          spike.rotation.x = Math.sin(a) * 0.24;
+          g.add(spike);
+        }
+        // Chỏm đỉnh trung tâm
+        const centerSpike = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.31, 7), hairMat);
+        centerSpike.position.set(0, 0.33, -0.01);
+        centerSpike.rotation.x = -0.12;
+        g.add(centerSpike);
+
       } else if (hatId === 'helmet') {
+        const h = new THREE.Group();
+        h.position.y = 0.17;
         const yMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.35, metalness: 0.1 });
         const dome = new THREE.Mesh(new THREE.SphereGeometry(0.29, 20, 14, 0, Math.PI * 2, 0, Math.PI * 0.55), yMat);
-        dome.position.y = 0.02; g.add(dome);
+        dome.position.y = 0.02; h.add(dome);
         const visor = new THREE.Mesh(new THREE.CylinderGeometry(0.30, 0.33, 0.04, 20), yMat);
-        visor.position.set(0, 0.03, -0.05); g.add(visor);
+        visor.position.set(0, 0.03, -0.05); h.add(visor);
         const lamp = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.04, 12), new THREE.MeshBasicMaterial({ color: 0xffffff }));
-        lamp.rotation.x = Math.PI / 2; lamp.position.set(0, 0.13, -0.28); g.add(lamp);
+        lamp.rotation.x = Math.PI / 2; lamp.position.set(0, 0.13, -0.28); h.add(lamp);
+        g.add(h);
+
       } else if (hatId === 'crown') {
+        const h = new THREE.Group();
+        h.position.y = 0.17;
         const goldMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, roughness: 0.25, metalness: 0.75 });
         const base = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.19, 0.14, 16), goldMat);
-        base.position.y = 0.08; g.add(base);
+        base.position.y = 0.08; h.add(base);
         for (let i = 0; i < 6; i++) {
           const a = (i / 6) * Math.PI * 2;
           const spike = new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.14, 6), goldMat);
-          spike.position.set(Math.cos(a) * 0.18, 0.20, Math.sin(a) * 0.18); g.add(spike);
+          spike.position.set(Math.cos(a) * 0.18, 0.20, Math.sin(a) * 0.18); h.add(spike);
         }
+        g.add(h);
       }
+
       return g;
     }
 
@@ -1382,10 +1813,12 @@
       const body = buildBodyParts(mat, 0);
       root.add(body.grp);
 
+      let spinWheel = null;
       if (hatId && hatId !== 'none') {
-        const hat = buildHatMesh(hatId);
-        hat.position.set(0, 1.71, 0);
-        body.grp.add(hat);
+        const acc = buildAccessoryMesh(hatId);
+        acc.position.set(0, 1.54, 0); // Neo đúng tâm đầu
+        body.grp.add(acc);
+        if (acc.userData.spinWheel) spinWheel = acc.userData.spinWheel;
       }
 
       let handItem = null;
@@ -1405,7 +1838,7 @@
         body.grp.add(xrayGroup);
       }
 
-      root.userData = { bodyGroup: body.grp, leftLeg: body.leftLeg, rightLeg: body.rightLeg, xrayGroup, handItem };
+      root.userData = { bodyGroup: body.grp, leftLeg: body.leftLeg, rightLeg: body.rightLeg, xrayGroup, handItem, spinWheel };
       return root;
     }
 
@@ -1420,7 +1853,7 @@
 
       const tex = new THREE.CanvasTexture(c);
       const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
-      sp.scale.set(2.1, 0.47, 1); sp.position.y = 2.38;
+      sp.scale.set(2.1, 0.47, 1); sp.position.y = 2.52;
       return sp;
     }
 
@@ -1429,20 +1862,20 @@
     // =========================================================================
     const previewCanvas = document.getElementById('preview-3d-canvas');
     const previewRenderer = new THREE.WebGLRenderer({ canvas: previewCanvas, alpha: true, antialias: true });
-    previewRenderer.setSize(126, 144, false);
+    previewRenderer.setSize(124, 156, false);
     const previewScene = new THREE.Scene();
-    const previewCamera = new THREE.PerspectiveCamera(40, 126 / 144, 0.1, 20);
-    previewCamera.position.set(0, 1.25, 3.6);
-    previewCamera.lookAt(0, 1.08, 0);
+    const previewCamera = new THREE.PerspectiveCamera(42, 124 / 156, 0.1, 20);
+    previewCamera.position.set(0, 1.32, 3.85);
+    previewCamera.lookAt(0, 1.18, 0);
 
-    previewScene.add(new THREE.AmbientLight(0xffffff, 0.72));
-    const pDir = new THREE.DirectionalLight(0xfff5e0, 0.9);
+    previewScene.add(new THREE.AmbientLight(0xffffff, 0.75));
+    const pDir = new THREE.DirectionalLight(0xfff5e0, 0.92);
     pDir.position.set(2, 4, 3); previewScene.add(pDir);
-    const pFill = new THREE.DirectionalLight(0x9ec5ff, 0.35);
+    const pFill = new THREE.DirectionalLight(0x9ec5ff, 0.38);
     pFill.position.set(-2, 1, -2); previewScene.add(pFill);
 
     let previewChar = null;
-    let previewAngle = Math.PI - 0.35;
+    let previewAngle = Math.PI - 0.3;
 
     function refreshPreviewModel() {
       if (previewChar) previewScene.remove(previewChar);
@@ -1456,7 +1889,7 @@
     window.addEventListener('pointerup', () => { dragPreview = false; });
     window.addEventListener('pointermove', (e) => {
       if (!dragPreview) return;
-      previewAngle += (e.clientX - lastPx) * 0.015;
+      previewAngle += (e.clientX - lastPx) * 0.016;
       lastPx = e.clientX;
     });
 
@@ -1471,6 +1904,7 @@
           btn.style.backgroundColor = s.css;
           btn.addEventListener('click', () => {
             myCosmetics.skin = s.id;
+            persistCosmetics();
             renderWardrobeUI(); refreshPreviewModel(); syncMyCosmeticsToRoom();
           });
           box.appendChild(btn);
@@ -1487,6 +1921,7 @@
           btn.textContent = h.name;
           btn.addEventListener('click', () => {
             myCosmetics.hat = h.id;
+            persistCosmetics();
             renderWardrobeUI(); refreshPreviewModel(); syncMyCosmeticsToRoom();
           });
           box.appendChild(btn);
@@ -1860,7 +2295,7 @@
       clearTimeout(swipeTipTimer);
       mobileSwipeTip.classList.remove('hidden');
       mobileSwipeTip.style.opacity = '1';
-      swipeTipTimer = setTimeout(hideSwipeTip, 3800);
+      swipeTipTimer = setTimeout(hideSwipeTip, 3600);
     }
 
     function hideSwipeTip() {
@@ -2317,6 +2752,7 @@
         isFinalMinute = false;
         xrayActive = false;
         endOverlay.classList.add('hidden');
+        settingsOverlay.classList.add('hidden');
         camYaw = 0; camPitch = 0;
         localPlayer = { x: 0, y: 0, tpSeq: -1, initialized: false, moving: false };
 
@@ -2362,6 +2798,7 @@
         isFinalMinute = false;
         xrayActive = false;
         blindOverlay.style.opacity = '0';
+        settingsOverlay.classList.add('hidden');
         if (document.pointerLockElement) document.exitPointerLock();
 
         const myRes = data.results.find(r => r.id === myId);
@@ -2413,6 +2850,8 @@
     btnCreate.addEventListener('click', () => {
       const name = nameInput.value.trim();
       if (!name) { menuError.textContent = 'Vui lòng nhập tên của bạn!'; return; }
+      try { localStorage.setItem('br3d_name', name); } catch (e) {}
+
       setMenuLoading(true, 'Đang khởi tạo phòng 20 người...');
       const code = generateRoomCode();
       if (peer) peer.destroy();
@@ -2484,6 +2923,7 @@
       const code = roomCodeInput.value.trim().toUpperCase();
       if (!name) { menuError.textContent = 'Vui lòng nhập tên của bạn!'; return; }
       if (code.length !== 4) { menuError.textContent = 'Mã phòng phải gồm 4 ký tự!'; return; }
+      try { localStorage.setItem('br3d_name', name); } catch (e) {}
 
       setMenuLoading(true, 'Đang kết nối tới phòng ' + code + '...');
       if (peer) peer.destroy();
@@ -2545,7 +2985,6 @@
         return;
       }
 
-      // Tự bật toàn màn hình trên điện thoại Android khi bấm Bắt Đầu
       if (isTouchDevice && !isInFullscreen()) tryEnterFullscreen(true);
 
       const newMap = generateRandomBackroomsMap();
@@ -2599,7 +3038,7 @@
     });
 
     // =========================================================================
-    // 8. ĐIỀU KHIỂN GÓC NHÌN THỨ NHẤT (PC, ĐIỆN THOẠI & IPAD)
+    // 8. ĐIỀU KHIỂN GÓC NHÌN THỨ NHẤT (ÁP DỤNG ĐỘ NHẠY TÙY CHỈNH)
     // =========================================================================
     const keys = {};
     let camYaw = 0, camPitch = 0;
@@ -2617,21 +3056,24 @@
     }
 
     function updateLockHint() {
+      const modalOpen = !endOverlay.classList.contains('hidden') || !settingsOverlay.classList.contains('hidden');
       const show = gameScreen.classList.contains('active')
         && !isTouchDevice
         && document.pointerLockElement !== gameCanvas
-        && endOverlay.classList.contains('hidden');
+        && !modalOpen;
       pcLockHint.classList.toggle('hidden', !show);
     }
 
     gameCanvas.addEventListener('click', () => {
-      if (!isTouchDevice && gameScreen.classList.contains('active') && endOverlay.classList.contains('hidden')) {
+      const modalOpen = !endOverlay.classList.contains('hidden') || !settingsOverlay.classList.contains('hidden');
+      if (!isTouchDevice && gameScreen.classList.contains('active') && !modalOpen) {
         gameCanvas.requestPointerLock?.();
       }
     });
     gameCanvas.addEventListener('contextmenu', (e) => e.preventDefault());
     window.addEventListener('mousedown', (e) => {
-      if (e.button === 2 && gameScreen.classList.contains('active') && endOverlay.classList.contains('hidden')) {
+      const modalOpen = !endOverlay.classList.contains('hidden') || !settingsOverlay.classList.contains('hidden');
+      if (e.button === 2 && gameScreen.classList.contains('active') && !modalOpen) {
         sendUseFlashlight();
       }
     });
@@ -2644,8 +3086,9 @@
 
     window.addEventListener('mousemove', (e) => {
       if (document.pointerLockElement === gameCanvas) {
-        camYaw -= e.movementX * 0.0024;
-        camPitch = Math.max(-1.05, Math.min(1.05, camPitch - e.movementY * 0.0022));
+        const ySign = userSettings.invertY ? -1 : 1;
+        camYaw -= e.movementX * 0.0024 * userSettings.mouseSens;
+        camPitch = Math.max(-1.05, Math.min(1.05, camPitch - e.movementY * 0.0022 * userSettings.mouseSens * ySign));
       }
     });
 
@@ -2672,7 +3115,7 @@
     }
 
     window.addEventListener('keydown', (e) => {
-      if (!gameScreen.classList.contains('active')) return;
+      if (!gameScreen.classList.contains('active') || !settingsOverlay.classList.contains('hidden')) return;
       const k = e.key.toLowerCase();
       keys[k] = true;
       if (e.code === 'Space' || k === 'e') { e.preventDefault(); sendRescue(); }
@@ -2681,7 +3124,7 @@
 
     window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
 
-    // Joystick trái tự co giãn bán kính theo điện thoại / iPad
+    // Joystick trái
     const joystickZone = document.getElementById('joystick-zone');
     const joystickBase = document.getElementById('joystick-base');
     const joystickKnob = document.getElementById('joystick-knob');
@@ -2724,7 +3167,7 @@
     joystickZone.addEventListener('touchend', releaseJoystick);
     joystickZone.addEventListener('touchcancel', releaseJoystick);
 
-    // Vuốt xoay góc nhìn 360° chống cuộn trang trình duyệt trên Android & iPadOS
+    // Vuốt xoay góc nhìn 360° nhân theo độ nhạy người dùng cài đặt
     let lookTouchId = null, lastLookX = 0, lastLookY = 0;
     gameCanvas.addEventListener('touchstart', (e) => {
       e.preventDefault();
@@ -2739,9 +3182,10 @@
 
     gameCanvas.addEventListener('touchmove', (e) => {
       e.preventDefault();
-      // Độ nhạy tự thích ứng theo chiều rộng màn hình (điện thoại ngang & iPad đều xoay mượt)
-      const sensX = window.innerWidth >= 768 ? 0.0044 : 0.0056;
-      const sensY = window.innerWidth >= 768 ? 0.0038 : 0.0046;
+      const baseX = window.innerWidth >= 768 ? 0.0044 : 0.0056;
+      const baseY = window.innerWidth >= 768 ? 0.0038 : 0.0046;
+      const sensX = baseX * userSettings.touchSens;
+      const sensY = baseY * userSettings.touchSens * (userSettings.invertY ? -1 : 1);
       for (const t of e.changedTouches) {
         if (t.identifier === lookTouchId) {
           const dx = t.clientX - lastLookX, dy = t.clientY - lastLookY;
@@ -2810,9 +3254,7 @@
         hudRole.style.borderColor = me.grace ? '#38bdf8' : '#e5e7eb';
         hudRole.style.color = me.grace ? '#7dd3fc' : '#ffffff';
       } else if (me.status === 'jailed') {
-        hudRole.textContent = me.lockTimer > 0
-          ? `🔒 LỒNG (${me.lockTimer}s)`
-          : '🆘 CỨU ĐƯỢC RỒI!';
+        hudRole.textContent = me.lockTimer > 0 ? `🔒 LỒNG (${me.lockTimer}s)` : '🆘 CỨU ĐƯỢC RỒI!';
         hudRole.style.borderColor = me.lockTimer > 0 ? '#ff9f1c' : '#4ade80';
         hudRole.style.color = me.lockTimer > 0 ? '#ffd166' : '#86efac';
       } else {
@@ -2890,7 +3332,6 @@
       const w = window.visualViewport ? window.visualViewport.width : window.innerWidth;
       const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
       const aspect = w / Math.max(1, h);
-      // Cân chỉnh FOV để điện thoại ngang 20:9 không bị méo rìa, còn iPad & PC giữ góc rộng chuẩn
       camera.fov = aspect > 1.9 ? 67 : (aspect < 0.8 ? 82 : 74);
       camera.aspect = aspect;
       camera.updateProjectionMatrix();
@@ -2915,6 +3356,7 @@
         if (!dragPreview) previewAngle += 0.008;
         previewChar.rotation.y = previewAngle;
         previewChar.position.y = Math.sin(t * 2.5) * 0.04;
+        if (previewChar.userData.spinWheel) previewChar.userData.spinWheel.rotation.z += dt * 1.1;
         previewRenderer.render(previewScene, previewCamera);
         return;
       }
@@ -2970,8 +3412,9 @@
       const meObj = renderPlayers.find(p => p.id === myId);
 
       if (meObj && localPlayer.initialized && gamePhase !== 'ended') {
-        if (keys['arrowleft']) camYaw += 2.25 * dt;
-        if (keys['arrowright']) camYaw -= 2.25 * dt;
+        const keyTurnSpeed = 2.25 * userSettings.mouseSens;
+        if (keys['arrowleft']) camYaw += keyTurnSpeed * dt;
+        if (keys['arrowright']) camYaw -= keyTurnSpeed * dt;
 
         let forward = -joystickVec.dy, strafe = joystickVec.dx;
         if (Math.abs(forward) < 0.05 && Math.abs(strafe) < 0.05) {
@@ -3051,6 +3494,9 @@
           entry.mesh.position.set(sp.x * WORLD_SCALE, 0, sp.y * WORLD_SCALE);
           entry.mesh.rotation.y = sp.yaw;
           const ud = entry.mesh.userData;
+
+          // Xoay nhẹ Vòng Mahoraga trên đầu người chơi đang trang bị
+          if (ud.spinWheel) ud.spinWheel.rotation.z += dt * 1.1;
 
           const showXrayForThis = seekerXrayPulseOn && p.role === 'hider' && p.status === 'alive';
           if (ud.xrayGroup) ud.xrayGroup.visible = showXrayForThis;
