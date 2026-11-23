@@ -55,7 +55,7 @@
 
     .panel {
       width: 100%;
-      max-width: 510px;
+      max-width: 515px;
       background: rgba(22, 19, 9, 0.95);
       border: 2px solid #c7b152;
       border-radius: 14px;
@@ -123,7 +123,7 @@
 
     #preview-3d-canvas {
       width: 124px;
-      height: 156px;
+      height: 158px;
       border-radius: 8px;
       background: radial-gradient(circle at center, #3f4669 0%, #191c2b 100%);
       border: 1px solid #6b5e29;
@@ -171,9 +171,11 @@
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 4px;
-      max-height: 116px;
+      max-height: 130px;
       overflow-y: auto;
-      padding-right: 2px;
+      padding-right: 3px;
+      scrollbar-width: thin;
+      scrollbar-color: #8a7b39 #1b180b;
     }
 
     .hat-btn {
@@ -354,10 +356,7 @@
       margin-bottom: 6px;
       color: #e6dbb0;
     }
-    .slider-head strong {
-      color: #f0da75;
-      font-size: 0.92rem;
-    }
+    .slider-head strong { color: #f0da75; font-size: 0.92rem; }
     input[type="range"] {
       width: 100%;
       accent-color: #e3c852;
@@ -399,10 +398,7 @@
       accent-color: #e3c852;
       cursor: pointer;
     }
-    .settings-footer {
-      display: flex;
-      gap: 8px;
-    }
+    .settings-footer { display: flex; gap: 8px; }
 
     /* Màn hình Game 3D */
     #game-screen {
@@ -736,7 +732,7 @@
       }
       .wardrobe-box { margin-bottom: 0; padding: 7px; }
       #preview-3d-canvas { width: 102px; height: 132px; }
-      .hat-grid { max-height: 86px; }
+      .hat-grid { max-height: 92px; }
       .player-list-box { max-height: 108px; margin-bottom: 6px; }
       .rules-mini { font-size: 0.68rem; padding: 5px 7px; margin-bottom: 6px; }
       .divider { margin: 7px 0; }
@@ -816,7 +812,7 @@
     <div class="panel menu-panel">
       <div class="panel-top">
         <h1 class="title">THE BACKROOMS 3D</h1>
-        <p class="subtitle">MÊ CUNG NGẪU NHIÊN 35&times;35 &bull; 20 NGƯỜI &bull; 16 MÀU &amp; 8 PHỤ KIỆN</p>
+        <p class="subtitle">MÊ CUNG NGẪU NHIÊN 35&times;35 &bull; 20 NGƯỜI &bull; 16 MÀU &amp; 10 PHỤ KIỆN</p>
         <div class="top-corner-btns">
           <button id="btn-menu-settings" type="button" class="btn-corner">⚙️</button>
           <button id="btn-menu-fs" type="button" class="btn-corner">⛶ Full</button>
@@ -825,12 +821,12 @@
 
       <div class="menu-body">
         <div class="wardrobe-box">
-          <canvas id="preview-3d-canvas" width="248" height="312"></canvas>
+          <canvas id="preview-3d-canvas" width="248" height="316"></canvas>
           <div class="wardrobe-controls">
             <div class="w-label">Màu Skin (16 Màu)</div>
             <div id="menu-skin-grid" class="skin-grid"></div>
 
-            <div class="w-label">Phụ kiện Đầu / Mặt</div>
+            <div class="w-label">Phụ kiện Đầu / Mặt (Cuộn thêm)</div>
             <div id="menu-hat-grid" class="hat-grid"></div>
           </div>
         </div>
@@ -888,9 +884,7 @@
             </div>
           </div>
 
-          <div class="rules-mini">
-            <b>Luật chơi:</b> Map 35&times;35 ngẫu nhiên. Bị bắt vào <b>Lồng Giam</b> khóa cứu <b>30s</b>. Nhặt <b>🔦 Đèn Pin</b> (tối đa 3 cây) chiếu làm <b>chói trắng Người Bắt 5s</b>. Còn <b>1 phút cuối</b>, Thấu Thị nháy <b>2s/10s</b> và bị bắt thua ngay!
-          </div>
+          <div class="rules-mini" id="lobby-rules-text"></div>
         </div>
 
         <div class="lobby-right">
@@ -1013,63 +1007,68 @@
 
   <script>
     // =========================================================================
-    // 1. CẤU HÌNH CHUNG, BẢNG 16 MÀU SKIN, 8 PHỤ KIỆN & CÀI ĐẶT ĐỘ NHẠY
+    // KHU VỰC TỰ CHỈNH THÔNG SỐ GAME (ĐÃ GIỮ ĐÚNG CÁC SỐ BẠN VỪA SỬA)
     // =========================================================================
+    const XRAY_ON_SEC = 4;          // Thời gian nháy nhìn xuyên tường (giây) -> Muốn lâu hơn thì tăng số này (VD: 5, 6)
+    const XRAY_OFF_SEC = 8;         // Thời gian tắt nghỉ giữa các lần nháy (giây)
+    const FLASH_RANGE = 446;        // Tầm chiếu sáng Đèn Pin (64 = 1 ô bản đồ)
+    const FLASH_HALF_ANGLE = 0.70;  // Độ rộng góc chiếu Đèn Pin (radian; càng lớn góc chiếu càng rộng)
+    const BLIND_DURATION = 5;       // Thời gian Người Bắt bị chói trắng màn hình (giây)
+    const SEEKER_LIGHT_RANGE = 24;  // Tầm hắt ánh sáng đỏ cảnh báo quanh Người Bắt (mét; 4 mét = 1 ô)
+    const SEEKER_SPEED = 236;       // Tốc độ chạy của Người Bắt
+    const HIDER_SPEED = 206;        // Tốc độ chạy của Người Chạy
+    const JAIL_LOCK_SECONDS = 20;   // Thời gian khóa cứu trong Lồng Giam (giây)
+    const MAX_ITEMS_TOTAL = 4;      // Số lượng Đèn Pin tối đa cùng tồn tại trên bản đồ
+    // =========================================================================
+
     const MAX_PLAYERS = 20;
     const MAP_SIZE = 35;
     const CENTER_TILE = 17;
     const TILE_SIZE = 64;
     const WORLD_SCALE = 4 / TILE_SIZE;
     const PLAYER_RADIUS = 15;
-
     const PREP_DURATION = 15;
-    const JAIL_LOCK_SECONDS = 30;
     const FINAL_MINUTE_SEC = 60;
-    const XRAY_ON_SEC = 2;
-    const XRAY_OFF_SEC = 10;
     const XRAY_CYCLE_SEC = XRAY_ON_SEC + XRAY_OFF_SEC;
-
-    const MAX_ITEMS_TOTAL = 3;
-    const BLIND_DURATION = 5;
-    const FLASH_RANGE = 290;
-    const FLASH_HALF_ANGLE = 0.58;
-
-    const SEEKER_SPEED = 236;
-    const HIDER_SPEED = 206;
     const ROOM_PREFIX = 'br35v4-';
 
+    document.getElementById('lobby-rules-text').innerHTML =
+      `<b>Luật chơi:</b> Map 35&times;35 ngẫu nhiên. Người Bắt phát <b>ánh sáng đỏ</b> khi lại gần. Bị bắt vào <b>Lồng Giam</b> khóa cứu <b>${JAIL_LOCK_SECONDS}s</b>. Nhặt <b>🔦 Đèn Pin</b> (tối đa ${MAX_ITEMS_TOTAL} cây) chiếu làm <b>chói trắng Người Bắt ${BLIND_DURATION}s</b>. Còn <b>1 phút cuối</b>, Thấu Thị nháy <b>${XRAY_ON_SEC}s/${XRAY_OFF_SEC}s</b> và bị bắt thua ngay!`;
+
     const SKINS = [
-      { id: 'white',   name: 'Trắng Gốc',    hex: 0xf1f3f8, css: '#f1f3f8' },
-      { id: 'silver',  name: 'Bạc Khói',     hex: 0x94a3b8, css: '#94a3b8' },
-      { id: 'black',   name: 'Đen Huyền',    hex: 0x262933, css: '#262933' },
+      { id: 'white',   name: 'Trắng Gốc',     hex: 0xf1f3f8, css: '#f1f3f8' },
+      { id: 'silver',  name: 'Bạc Khói',      hex: 0x94a3b8, css: '#94a3b8' },
+      { id: 'black',   name: 'Đen Huyền',     hex: 0x262933, css: '#262933' },
       { id: 'navy',    name: 'Xanh Hoàng Gia',hex: 0x1e3a8a, css: '#1e3a8a' },
-      { id: 'blue',    name: 'Xanh Dương',   hex: 0x3b82f6, css: '#3b82f6' },
-      { id: 'cyan',    name: 'Xanh Neon',    hex: 0x22d3ee, css: '#22d3ee' },
-      { id: 'teal',    name: 'Xanh Ngọc',    hex: 0x14b8a6, css: '#14b8a6' },
-      { id: 'green',   name: 'Xanh Lá',      hex: 0x22c55e, css: '#22c55e' },
-      { id: 'lime',    name: 'Xanh Chanh',   hex: 0xa3e635, css: '#a3e635' },
-      { id: 'yellow',  name: 'Vàng Tươi',    hex: 0xfacc15, css: '#facc15' },
-      { id: 'gold',    name: 'Vàng Đồng',    hex: 0xd97706, css: '#d97706' },
-      { id: 'orange',  name: 'Cam Rực',      hex: 0xfb923c, css: '#fb923c' },
-      { id: 'coral',   name: 'Hồng San Hô',  hex: 0xfb7185, css: '#fb7185' },
-      { id: 'pink',    name: 'Hồng Đào',     hex: 0xf472b6, css: '#f472b6' },
-      { id: 'purple',  name: 'Tím Mộng',     hex: 0xa855f7, css: '#a855f7' },
-      { id: 'brown',   name: 'Nâu Đất',      hex: 0x78350f, css: '#78350f' }
+      { id: 'blue',    name: 'Xanh Dương',    hex: 0x3b82f6, css: '#3b82f6' },
+      { id: 'cyan',    name: 'Xanh Neon',     hex: 0x22d3ee, css: '#22d3ee' },
+      { id: 'teal',    name: 'Xanh Ngọc',     hex: 0x14b8a6, css: '#14b8a6' },
+      { id: 'green',   name: 'Xanh Lá',       hex: 0x22c55e, css: '#22c55e' },
+      { id: 'lime',    name: 'Xanh Chanh',    hex: 0xa3e635, css: '#a3e635' },
+      { id: 'yellow',  name: 'Vàng Tươi',     hex: 0xfacc15, css: '#facc15' },
+      { id: 'gold',    name: 'Vàng Đồng',     hex: 0xd97706, css: '#d97706' },
+      { id: 'orange',  name: 'Cam Rực',       hex: 0xfb923c, css: '#fb923c' },
+      { id: 'coral',   name: 'Hồng San Hô',   hex: 0xfb7185, css: '#fb7185' },
+      { id: 'pink',    name: 'Hồng Đào',      hex: 0xf472b6, css: '#f472b6' },
+      { id: 'purple',  name: 'Tím Mộng',      hex: 0xa855f7, css: '#a855f7' },
+      { id: 'brown',   name: 'Nâu Đất',       hex: 0x78350f, css: '#78350f' }
     ];
 
     const HATS = [
       { id: 'none',     name: 'Không đội' },
-      { id: 'hutao',    name: 'Nón Hutao' },
+      { id: 'hutao',    name: 'Nón Hoa Mai' },
       { id: 'furina',   name: 'Nón Furina' },
       { id: 'obito',    name: 'Mặt nạ Obito' },
       { id: 'mahoraga', name: 'Vòng Mahoraga' },
       { id: 'gojo',     name: 'Tóc Gojo' },
+      { id: 'frog',     name: 'Mặt ếch' },
+      { id: 'shiba',    name: 'Mặt nạ Shiba' },
       { id: 'helmet',   name: 'Mũ Bảo Hộ' },
       { id: 'crown',    name: 'Vương Miện' }
     ];
 
     let userSettings = { touchSens: 1.0, mouseSens: 1.0, invertY: false };
-    let myCosmetics = { skin: 'white', hat: 'furina' };
+    let myCosmetics = { skin: 'white', hat: 'shiba' };
 
     try {
       const savedSet = JSON.parse(localStorage.getItem('br3d_settings') || 'null');
@@ -1420,7 +1419,7 @@
     }
 
     // =========================================================================
-    // 3. MÔ HÌNH 3D NHÂN VẬT + 7 PHỤ KIỆN
+    // 3. MÔ HÌNH 3D NHÂN VẬT + 9 PHỤ KIỆN (GỒM MẶT ẾCH & MẶT NẠ SHIBA ROBLOX)
     // =========================================================================
     function createTalismanTexture() {
       const c = document.createElement('canvas'); c.width = 128; c.height = 160;
@@ -1480,6 +1479,73 @@
       return new THREE.CanvasTexture(c);
     }
     const obitoMaskTex = createObitoMaskTexture();
+
+    // Họa tiết da sần xanh lá đặc trưng cho Mặt ếch
+    function createFrogSkinTexture() {
+      const c = document.createElement('canvas'); c.width = 256; c.height = 256;
+      const g = c.getContext('2d');
+      const grad = g.createLinearGradient(0, 0, 0, 256);
+      grad.addColorStop(0, '#368a24');
+      grad.addColorStop(0.55, '#2b7a1d');
+      grad.addColorStop(1, '#1e5c15');
+      g.fillStyle = grad;
+      g.fillRect(0, 0, 256, 256);
+      for (let i = 0; i < 1800; i++) {
+        g.fillStyle = Math.random() > 0.45 ? 'rgba(95, 190, 55, 0.16)' : 'rgba(12, 48, 10, 0.2)';
+        g.beginPath();
+        g.arc(Math.random() * 256, Math.random() * 256, 1.2 + Math.random() * 2.2, 0, Math.PI * 2);
+        g.fill();
+      }
+      return new THREE.CanvasTexture(c);
+    }
+    const frogSkinTex = createFrogSkinTexture();
+
+    // Họa tiết lông vàng-kem đặc trưng cho Mặt nạ Shiba (Doge Roblox)
+    function createShibaFurTexture() {
+      const c = document.createElement('canvas'); c.width = 256; c.height = 256;
+      const g = c.getContext('2d');
+      const grad = g.createLinearGradient(0, 0, 0, 256);
+      grad.addColorStop(0, '#cf9946');
+      grad.addColorStop(0.45, '#deb062');
+      grad.addColorStop(0.68, '#f0deb0');
+      grad.addColorStop(1, '#f7f0dc');
+      g.fillStyle = grad;
+      g.fillRect(0, 0, 256, 256);
+      for (let i = 0; i < 1400; i++) {
+        g.fillStyle = Math.random() > 0.5 ? 'rgba(255, 245, 220, 0.16)' : 'rgba(135, 88, 30, 0.12)';
+        g.fillRect(Math.random() * 256, Math.random() * 256, 2, 5);
+      }
+      return new THREE.CanvasTexture(c);
+    }
+    const shibaFurTex = createShibaFurTexture();
+
+    // Họa tiết kính pixel đen trắng "Deal With It" sắc nét
+    function createPixelShadesTexture() {
+      const c = document.createElement('canvas'); c.width = 240; c.height = 60;
+      const g = c.getContext('2d');
+      g.clearRect(0, 0, 240, 60);
+      const p = 10; // Kích thước 1 ô pixel (24x6)
+      const rows = [
+        "111111111111111111111111",
+        "112121111111112121111111",
+        "011212111000011212111110",
+        "001121210000001121211100",
+        "000111100000000111111000",
+        "000000000000000000000000"
+      ];
+      for (let r = 0; r < rows.length; r++) {
+        for (let col = 0; col < rows[r].length; col++) {
+          const ch = rows[r][col];
+          if (ch === '1') { g.fillStyle = '#0e0e11'; g.fillRect(col * p, r * p, p, p); }
+          else if (ch === '2') { g.fillStyle = '#f8fafc'; g.fillRect(col * p, r * p, p, p); }
+        }
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.magFilter = THREE.NearestFilter;
+      tex.minFilter = THREE.NearestFilter;
+      return tex;
+    }
+    const pixelShadesTex = createPixelShadesTexture();
 
     function createPlumBlossom(scale = 1) {
       const flower = new THREE.Group();
@@ -1686,6 +1752,187 @@
         centerSpike.rotation.x = -0.12;
         g.add(centerSpike);
 
+      } else if (hatId === 'frog') {
+        // Mặt ếch xanh lá sần + mắt vàng lồi + 2 lỗ mũi đen + môi vàng chu dày
+        const greenMat = new THREE.MeshStandardMaterial({ map: frogSkinTex, roughness: 0.62, metalness: 0.05 });
+        const lipMat = new THREE.MeshStandardMaterial({ color: 0xebd71c, roughness: 0.42, metalness: 0.04 });
+        const eyeYMat = new THREE.MeshStandardMaterial({ color: 0xe6cb25, roughness: 0.28 });
+        const pupilMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.12, metalness: 0.2 });
+        const holeMat = new THREE.MeshBasicMaterial({ color: 0x0b0e08 });
+        const glintMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+        // Đầu chính trùm kín đầu nhân vật
+        const headCover = new THREE.Mesh(new THREE.SphereGeometry(0.248, 22, 18), greenMat);
+        headCover.scale.set(0.96, 1.15, 1.06);
+        headCover.position.set(0, 0.01, -0.01);
+        g.add(headCover);
+
+        // Cổ trùm nhẹ bên dưới
+        const neckCover = new THREE.Mesh(new THREE.CylinderGeometry(0.185, 0.16, 0.16, 18), greenMat);
+        neckCover.position.set(0, -0.22, 0.01);
+        g.add(neckCover);
+
+        // Phần mặt trước nhô ra hình mõm
+        const snout = new THREE.Mesh(new THREE.SphereGeometry(0.18, 18, 14), greenMat);
+        snout.scale.set(0.86, 1.02, 1.02);
+        snout.position.set(0, -0.05, -0.15);
+        g.add(snout);
+
+        // 2 gờ vây/tai nhẹ hai bên đầu
+        [-1, 1].forEach(side => {
+          const ridge = new THREE.Mesh(new THREE.SphereGeometry(0.085, 12, 10), greenMat);
+          ridge.scale.set(0.32, 1.35, 0.68);
+          ridge.position.set(side * 0.22, 0.06, 0.05);
+          ridge.rotation.y = side * 0.25;
+          g.add(ridge);
+        });
+
+        // 2 mắt vàng lồi to + con ngươi đen bóng + đốm sáng
+        [-1, 1].forEach(side => {
+          const eyeGroup = new THREE.Group();
+          eyeGroup.position.set(side * 0.155, 0.085, -0.145);
+          eyeGroup.rotation.y = side * 0.62;
+
+          const lid = new THREE.Mesh(new THREE.TorusGeometry(0.066, 0.015, 8, 18), greenMat);
+          eyeGroup.add(lid);
+
+          const eyeball = new THREE.Mesh(new THREE.SphereGeometry(0.064, 16, 12), eyeYMat);
+          eyeball.scale.set(1, 1, 0.72);
+          eyeGroup.add(eyeball);
+
+          const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.041, 14, 10), pupilMat);
+          pupil.scale.set(1, 1, 0.6);
+          pupil.position.z = -0.032;
+          eyeGroup.add(pupil);
+
+          const glint = new THREE.Mesh(new THREE.SphereGeometry(0.011, 8, 8), glintMat);
+          glint.position.set(side * -0.014, 0.016, -0.055);
+          eyeGroup.add(glint);
+
+          g.add(eyeGroup);
+        });
+
+        // 2 lỗ mũi phồng giữa mặt
+        [-1, 1].forEach(side => {
+          const bump = new THREE.Mesh(new THREE.SphereGeometry(0.044, 12, 10), greenMat);
+          bump.scale.set(1.05, 0.9, 0.85);
+          bump.position.set(side * 0.052, 0.045, -0.235);
+          g.add(bump);
+
+          const hole = new THREE.Mesh(new THREE.SphereGeometry(0.025, 10, 8), holeMat);
+          hole.scale.set(1.25, 0.62, 0.7);
+          hole.position.set(side * 0.052, 0.040, -0.266);
+          g.add(hole);
+        });
+
+        // Đôi môi vàng dày chu ra đặc trưng
+        const upperLip = new THREE.Mesh(new THREE.SphereGeometry(0.088, 16, 12), lipMat);
+        upperLip.scale.set(1.18, 0.56, 0.72);
+        upperLip.position.set(0, -0.105, -0.275);
+        g.add(upperLip);
+
+        const lowerLip = new THREE.Mesh(new THREE.SphereGeometry(0.086, 16, 12), lipMat);
+        lowerLip.scale.set(1.12, 0.58, 0.70);
+        lowerLip.position.set(0, -0.165, -0.268);
+        g.add(lowerLip);
+
+        const mouthHole = new THREE.Mesh(new THREE.SphereGeometry(0.044, 12, 8), holeMat);
+        mouthHole.scale.set(1.35, 0.36, 0.6);
+        mouthHole.position.set(0, -0.135, -0.320);
+        g.add(mouthHole);
+
+      } else if (hatId === 'shiba') {
+        // Mặt nạ Shiba (Doge Roblox) + Kính đen pixel "Deal With It"
+        const furMat = new THREE.MeshStandardMaterial({ map: shibaFurTex, roughness: 0.72, metalness: 0.02 });
+        const creamMat = new THREE.MeshStandardMaterial({ color: 0xf4ead0, roughness: 0.75 });
+        const earOuterMat = new THREE.MeshStandardMaterial({ color: 0xc99342, roughness: 0.72 });
+        const earInnerMat = new THREE.MeshStandardMaterial({ color: 0x9c6e35, roughness: 0.8 });
+        const noseMat = new THREE.MeshStandardMaterial({ color: 0x1a1715, roughness: 0.28, metalness: 0.15 });
+        const shadeDarkMat = new THREE.MeshStandardMaterial({ color: 0x101014, roughness: 0.3 });
+
+        // Đầu tròn bầu bĩnh của Shiba
+        const headBall = new THREE.Mesh(new THREE.SphereGeometry(0.255, 22, 18), furMat);
+        headBall.scale.set(1.06, 1.0, 1.04);
+        headBall.position.set(0, 0.01, 0);
+        g.add(headBall);
+
+        // Hai má phúng phính màu kem
+        [-1, 1].forEach(side => {
+          const cheek = new THREE.Mesh(new THREE.SphereGeometry(0.135, 14, 12), creamMat);
+          cheek.scale.set(1.0, 0.85, 0.92);
+          cheek.position.set(side * 0.155, -0.06, -0.09);
+          g.add(cheek);
+        });
+
+        // Mõm Shiba nhô ra phía trước (-Z)
+        const muzzle = new THREE.Mesh(new THREE.ConeGeometry(0.145, 0.26, 16), creamMat);
+        muzzle.rotation.x = -Math.PI / 2;
+        muzzle.scale.set(1.08, 1.0, 0.82);
+        muzzle.position.set(0, -0.045, -0.24);
+        g.add(muzzle);
+
+        const muzzleBridge = new THREE.Mesh(new THREE.SphereGeometry(0.115, 14, 10), furMat);
+        muzzleBridge.scale.set(0.95, 0.72, 1.25);
+        muzzleBridge.position.set(0, 0.0, -0.21);
+        g.add(muzzleBridge);
+
+        // Chóp mũi đen bóng
+        const nose = new THREE.Mesh(new THREE.SphereGeometry(0.056, 14, 10), noseMat);
+        nose.scale.set(1.18, 0.88, 0.9);
+        nose.position.set(0, -0.025, -0.355);
+        g.add(nose);
+
+        // Nét miệng mỉm cười nhẹ hai bên mõm
+        [-1, 1].forEach(side => {
+          const smirk = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.014, 0.13), noseMat);
+          smirk.position.set(side * 0.095, -0.105, -0.255);
+          smirk.rotation.y = side * 0.36;
+          smirk.rotation.x = -0.14;
+          g.add(smirk);
+        });
+
+        // Hai tai tam giác dựng nhọn
+        [-1, 1].forEach(side => {
+          const earGrp = new THREE.Group();
+          earGrp.position.set(side * 0.165, 0.225, 0.02);
+          earGrp.rotation.z = side * -0.32;
+          earGrp.rotation.x = -0.12;
+          earGrp.rotation.y = side * -0.22;
+
+          const outerEar = new THREE.Mesh(new THREE.ConeGeometry(0.088, 0.20, 4), earOuterMat);
+          outerEar.scale.set(1.0, 1.0, 0.55);
+          earGrp.add(outerEar);
+
+          const innerEar = new THREE.Mesh(new THREE.ConeGeometry(0.054, 0.13, 4), earInnerMat);
+          innerEar.scale.set(1.0, 1.0, 0.45);
+          innerEar.position.set(0, -0.015, -0.022);
+          earGrp.add(innerEar);
+
+          g.add(earGrp);
+        });
+
+        // Kính đen pixel "Deal With It" (mặt trước + 2 gọng kính ôm hai bên đầu)
+        const shadesFront = new THREE.Mesh(
+          new THREE.PlaneGeometry(0.56, 0.14),
+          new THREE.MeshBasicMaterial({
+            map: pixelShadesTex, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide
+          })
+        );
+        shadesFront.position.set(0, 0.068, -0.268);
+        shadesFront.rotation.y = Math.PI; // Quay mặt trước ra -Z
+        g.add(shadesFront);
+
+        // Khối dày mảnh sau mặt kính tạo cảm giác 3D
+        const shadesTopBar = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.026, 0.022), shadeDarkMat);
+        shadesTopBar.position.set(0, 0.122, -0.256);
+        g.add(shadesTopBar);
+
+        [-1, 1].forEach(side => {
+          const arm = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.032, 0.27), shadeDarkMat);
+          arm.position.set(side * 0.265, 0.115, -0.13);
+          g.add(arm);
+        });
+
       } else if (hatId === 'helmet') {
         const h = new THREE.Group();
         h.position.y = 0.17;
@@ -1772,11 +2019,25 @@
       const bodyColor = isSeeker ? 0xdc2626 : skinHex;
       const mat = new THREE.MeshStandardMaterial({
         color: bodyColor, roughness: 0.42, metalness: 0.06,
-        emissive: isSeeker ? 0x3b0505 : 0x000000
+        emissive: isSeeker ? 0x6b0808 : 0x000000
       });
 
       const body = buildBodyParts(mat, 0);
       root.add(body.grp);
+
+      let seekerAuraRing = null;
+      if (isSeeker) {
+        seekerAuraRing = new THREE.Mesh(
+          new THREE.RingGeometry(0.55, 0.95, 24),
+          new THREE.MeshBasicMaterial({
+            color: 0xff2222, transparent: true, opacity: 0.65,
+            side: THREE.DoubleSide, depthWrite: false
+          })
+        );
+        seekerAuraRing.rotation.x = -Math.PI / 2;
+        seekerAuraRing.position.y = 0.05;
+        root.add(seekerAuraRing);
+      }
 
       let spinWheel = null;
       if (hatId && hatId !== 'none') {
@@ -1803,11 +2064,13 @@
         body.grp.add(xrayGroup);
       }
 
-      root.userData = { bodyGroup: body.grp, leftLeg: body.leftLeg, rightLeg: body.rightLeg, xrayGroup, handItem, spinWheel };
+      root.userData = {
+        bodyGroup: body.grp, leftLeg: body.leftLeg, rightLeg: body.rightLeg,
+        xrayGroup, handItem, spinWheel, seekerAuraRing
+      };
       return root;
     }
 
-    // Bảng tên gọn hơn, hòa sương mù (fog: true) & tự dọn bộ nhớ để không lòi xuyên tường
     function createNameTagSprite(text, colorHex = '#ffffff', scaleW = 1.48, scaleH = 0.34) {
       const c = document.createElement('canvas'); c.width = 290; c.height = 64;
       const g = c.getContext('2d');
@@ -1819,10 +2082,7 @@
 
       const tex = new THREE.CanvasTexture(c);
       const sp = new THREE.Sprite(new THREE.SpriteMaterial({
-        map: tex,
-        transparent: true,
-        depthWrite: false,
-        fog: true
+        map: tex, transparent: true, depthWrite: false, fog: true
       }));
       sp.scale.set(scaleW, scaleH, 1);
       sp.position.y = 2.48;
@@ -1842,9 +2102,9 @@
     // =========================================================================
     const previewCanvas = document.getElementById('preview-3d-canvas');
     const previewRenderer = new THREE.WebGLRenderer({ canvas: previewCanvas, alpha: true, antialias: true });
-    previewRenderer.setSize(124, 156, false);
+    previewRenderer.setSize(124, 158, false);
     const previewScene = new THREE.Scene();
-    const previewCamera = new THREE.PerspectiveCamera(42, 124 / 156, 0.1, 20);
+    const previewCamera = new THREE.PerspectiveCamera(42, 124 / 158, 0.1, 20);
     previewCamera.position.set(0, 1.32, 3.85);
     previewCamera.lookAt(0, 1.18, 0);
 
@@ -1912,7 +2172,7 @@
     refreshPreviewModel();
 
     // =========================================================================
-    // 5. HỆ THỐNG ĐỒ HỌA 3D THẾ GIỚI
+    // 5. HỆ THỐNG ĐỒ HỌA 3D THẾ GIỚI + ÁNH SÁNG ĐỎ CỦA NGƯỜI BẮT
     // =========================================================================
     const gameCanvas = document.getElementById('game-canvas');
     const renderer = new THREE.WebGLRenderer({ canvas: gameCanvas, antialias: true, powerPreference: 'high-performance' });
@@ -1938,6 +2198,10 @@
 
     const playerFlashLight = new THREE.PointLight(0xfff2c6, 0.75, 18);
     scene.add(playerFlashLight);
+
+    const seekerRedLight = new THREE.PointLight(0xff1a24, 3.2, SEEKER_LIGHT_RANGE, 1.45);
+    seekerRedLight.visible = false;
+    scene.add(seekerRedLight);
 
     const centerLight = new THREE.PointLight(0xffdf6b, 1.4, 24);
     centerLight.position.set((CENTER_TILE + 0.5) * 4, 3.0, (CENTER_TILE + 0.5) * 4);
@@ -2117,13 +2381,13 @@
 
     function spawnFlashBeamEffect(x, y, yaw) {
       const length = FLASH_RANGE * WORLD_SCALE;
-      const radius = Math.tan(FLASH_HALF_ANGLE) * length * 0.72;
-      const geo = new THREE.ConeGeometry(radius, length, 20, 1, true);
+      const radius = Math.tan(FLASH_HALF_ANGLE) * length * 0.68;
+      const geo = new THREE.ConeGeometry(radius, length, 22, 1, true);
       geo.translate(0, -length / 2, 0);
       geo.rotateX(-Math.PI / 2);
 
       const mat = new THREE.MeshBasicMaterial({
-        color: 0xffffe8, transparent: true, opacity: 0.55,
+        color: 0xffffe8, transparent: true, opacity: 0.56,
         side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending
       });
       const cone = new THREE.Mesh(geo, mat);
@@ -2131,10 +2395,10 @@
       cone.rotation.y = yaw;
       scene.add(cone);
 
-      const light = new THREE.PointLight(0xffffff, 3.2, 22);
-      light.position.set((x - Math.sin(yaw) * 45) * WORLD_SCALE, 1.6, (y - Math.cos(yaw) * 45) * WORLD_SCALE);
+      const light = new THREE.PointLight(0xffffff, 3.6, Math.max(26, length * 1.15));
+      light.position.set((x - Math.sin(yaw) * 65) * WORLD_SCALE, 1.65, (y - Math.cos(yaw) * 65) * WORLD_SCALE);
       scene.add(light);
-      activeFlashBeams.push({ mesh: cone, light, life: 0.65, maxLife: 0.65 });
+      activeFlashBeams.push({ mesh: cone, light, life: 0.72, maxLife: 0.72 });
     }
 
     const playerMeshes = {};
@@ -2174,7 +2438,7 @@
           label = `[MIỄN NHIỄM] ${p.name}`; color = '#38bdf8';
         }
         entry.nameTag = createNameTagSprite(label, color);
-        entry.nameTag.visible = false; // Mặc định ẩn, chỉ hiện khi kiểm tra tầm nhìn thẳng hợp lệ
+        entry.nameTag.visible = false;
         entry.mesh.add(entry.nameTag);
       }
 
@@ -2185,14 +2449,41 @@
     }
 
     // =========================================================================
-    // 6. MẠNG PEERJS + ĐỒNG BỘ MƯỢT 60FPS
+    // 6. CẤU HÌNH MẠNG PEERJS CÓ TURN RELAY (VƯỢT TƯỜNG LỬA 4G/5G/NAT CHẶT)
     // =========================================================================
     const PEER_CONFIG = {
+      pingInterval: 5000,
       config: {
         iceServers: [
           { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' }
-        ]
+          { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:stun2.l.google.com:19302' },
+          { urls: 'stun:stun.cloudflare.com:3478' },
+          { urls: 'stun:openrelay.metered.ca:80' },
+          // Máy chủ trung gian TURN (vượt tường lửa 4G/5G & Wi-Fi chặn P2P qua cổng 80/443)
+          {
+            urls: 'turn:openrelay.metered.ca:80',
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+          },
+          {
+            urls: 'turn:openrelay.metered.ca:80?transport=tcp',
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+          },
+          {
+            urls: 'turn:openrelay.metered.ca:443',
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+          },
+          {
+            urls: 'turns:openrelay.metered.ca:443?transport=tcp',
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+          }
+        ],
+        iceCandidatePoolSize: 10,
+        sdpSemantics: 'unified-plan'
       }
     };
 
@@ -2471,7 +2762,7 @@
             seeker.blindTimer = BLIND_DURATION;
             hostBroadcast({
               type: 'toast',
-              message: `⚡ ${user.name} chiếu ĐÈN PIN làm chói mắt ${seeker.name} trong 5 giây!`,
+              message: `⚡ ${user.name} chiếu ĐÈN PIN làm chói mắt ${seeker.name} trong ${BLIND_DURATION} giây!`,
               style: 'success'
             });
           }
@@ -2522,7 +2813,7 @@
       } else if (bot.status === 'alive') {
         if (bot.hasItem && seeker && seeker.blindTimer <= 0) {
           const distS = Math.hypot(seeker.x - bot.x, seeker.y - bot.y);
-          if (distS < FLASH_RANGE * 0.78 && hasLineOfSight(bot.x, bot.y, seeker.x, seeker.y)) {
+          if (distS < FLASH_RANGE * 0.8 && hasLineOfSight(bot.x, bot.y, seeker.x, seeker.y)) {
             bot.yaw = Math.atan2(-(seeker.x - bot.x), -(seeker.y - bot.y));
             hostHandleUseFlashlight(bot.id, null);
             return;
@@ -2579,13 +2870,13 @@
           hostRoom.phase = 'playing';
           hostRoom.timer = hostRoom.matchDuration;
           hostRoom.finalMinuteAlerted = false;
-          hostBroadcast({ type: 'toast', message: '🚨 LỒNG ĐÃ MỞ! Hãy tìm Đèn Pin và sống sót hết giờ!', style: 'danger' });
+          hostBroadcast({ type: 'toast', message: '🚨 LỒNG ĐÃ MỞ! Hãy chú ý ánh sáng đỏ của Người Bắt!', style: 'danger' });
         } else if (hostRoom.phase === 'playing') {
           if (hostRoom.timer <= FINAL_MINUTE_SEC && !hostRoom.finalMinuteAlerted) {
             hostRoom.finalMinuteAlerted = true;
             hostBroadcast({
               type: 'toast',
-              message: '👁️ 1 PHÚT CUỐI! Đôi Mắt Thấu Thị nháy 2s mỗi 10s — Ai bị bắt lúc này THUA NGAY!',
+              message: `👁️ 1 PHÚT CUỐI! Đôi Mắt Thấu Thị nháy ${XRAY_ON_SEC}s mỗi ${XRAY_OFF_SEC}s — Ai bị bắt lúc này THUA NGAY!`,
               style: 'danger'
             });
           }
@@ -2623,7 +2914,7 @@
             if (prevLock > 0 && p.lockTimer === 0) {
               hostBroadcast({
                 type: 'toast',
-                message: `🔓 ${p.name} đã hết 30s khóa! Đồng đội có thể chạy về Lồng Giam CỨU!`,
+                message: `🔓 ${p.name} đã hết ${JAIL_LOCK_SECONDS}s khóa! Đồng đội có thể chạy về Lồng Giam CỨU!`,
                 style: 'success'
               });
             }
@@ -2643,7 +2934,7 @@
               if (Math.hypot(p.x - it.x, p.y - it.y) < 36) {
                 p.hasItem = true;
                 hostRoom.items.splice(i, 1);
-                hostSendTo(p.id, { type: 'toast', message: '🔦 Đã nhặt ĐÈN PIN! Chiếu làm chói Người Bắt 5s!', style: 'success' });
+                hostSendTo(p.id, { type: 'toast', message: `🔦 Đã nhặt ĐÈN PIN! Chiếu làm chói Người Bắt ${BLIND_DURATION}s!`, style: 'success' });
                 break;
               }
             }
@@ -2664,7 +2955,7 @@
                   h.x = (CENTER_TILE + 0.5) * TILE_SIZE + Math.cos(angle) * 28;
                   h.y = (CENTER_TILE + 0.5) * TILE_SIZE + Math.sin(angle) * 28;
                   h.tpSeq++;
-                  hostBroadcast({ type: 'toast', message: `⛓️ ${h.name} bị đưa vào Lồng Giam! Khóa cứu 30s!`, style: 'warning' });
+                  hostBroadcast({ type: 'toast', message: `⛓️ ${h.name} bị đưa vào Lồng Giam! Khóa cứu ${JAIL_LOCK_SECONDS}s!`, style: 'warning' });
                 }
                 hostCheckMatchEnd();
               }
@@ -2707,6 +2998,7 @@
         durationDisplay.textContent = formatClock(configuredDuration);
         endOverlay.classList.add('hidden');
         blindOverlay.style.opacity = '0';
+        seekerRedLight.visible = false;
         showScreen(lobbyScreen);
 
         playerCountEl.textContent = data.players.length;
@@ -2789,6 +3081,7 @@
         isFinalMinute = false;
         xrayActive = false;
         blindOverlay.style.opacity = '0';
+        seekerRedLight.visible = false;
         settingsOverlay.classList.add('hidden');
         if (document.pointerLockElement) document.exitPointerLock();
 
@@ -2818,7 +3111,7 @@
     }
 
     // =========================================================================
-    // 7. SỰ KIỆN MENU & LOBBY
+    // 7. SỰ KIỆN MENU & LOBBY (TỰ ĐỘNG GIỮ KẾT NỐI TÍN HIỆU + VƯỢT NAT)
     // =========================================================================
     function setMenuLoading(loading, text) {
       btnCreate.disabled = loading;
@@ -2853,14 +3146,25 @@
       peer.on('open', (id) => {
         myId = id; currentRoomCode = code;
         setMenuLoading(false, '');
-        hostRoom = {
-          code, hostId: id, phase: 'lobby', timer: 0,
-          matchDuration: 180, finalMinuteAlerted: false,
-          items: [],
-          players: { [id]: createPlayerObj(id, name, myCosmetics, false) }
-        };
-        startHostGameLoop();
+        if (!hostRoom || hostRoom.code !== code) {
+          hostRoom = {
+            code, hostId: id, phase: 'lobby', timer: 0,
+            matchDuration: 180, finalMinuteAlerted: false,
+            items: [],
+            players: { [id]: createPlayerObj(id, name, myCosmetics, false) }
+          };
+          startHostGameLoop();
+        }
         hostEmitLobby();
+      });
+
+      // Giữ kết nối tới máy chủ tín hiệu luôn sống để bạn B vào sau vẫn tìm thấy phòng!
+      peer.on('disconnected', () => {
+        if (peer && !peer.destroyed) {
+          setTimeout(() => {
+            if (peer && !peer.destroyed && peer.disconnected) peer.reconnect();
+          }, 1500);
+        }
       });
 
       peer.on('connection', (conn) => {
@@ -2905,7 +3209,11 @@
       });
 
       peer.on('error', (err) => {
-        setMenuLoading(false, 'Lỗi kết nối (' + err.type + '). Bấm Tạo Phòng lại!');
+        if (err.type === 'unavailable-id') {
+          setMenuLoading(false, 'Mã phòng trùng, vui lòng bấm Tạo Phòng lại!');
+        } else {
+          setMenuLoading(false, 'Lỗi kết nối (' + err.type + '). Bấm Tạo Phòng lại!');
+        }
       });
     });
 
@@ -2922,24 +3230,55 @@
       isHost = false;
       peer = new Peer(PEER_CONFIG);
       let connected = false;
+
+      const relayNotice = setTimeout(() => {
+        if (!connected) {
+          menuError.textContent = 'Đang chuyển tiếp qua máy chủ TURN (4G/NAT)... vui lòng đợi chút!';
+        }
+      }, 4500);
+
       const timeout = setTimeout(() => {
-        if (!connected) { setMenuLoading(false, 'Không tìm thấy phòng hoặc mạng bị chặn!'); if (peer) peer.destroy(); }
-      }, 9000);
+        if (!connected) {
+          clearTimeout(relayNotice);
+          setMenuLoading(false, 'Không thể kết nối tới phòng ' + code + '. Kiểm tra mã phòng hoặc đổi người tạo phòng!');
+          if (peer) peer.destroy();
+        }
+      }, 15000);
 
       peer.on('open', (id) => {
         myId = id;
-        hostConn = peer.connect(ROOM_PREFIX + code, { reliable: true });
+        hostConn = peer.connect(ROOM_PREFIX + code, { reliable: true, serialization: 'json' });
         hostConn.on('open', () => {
-          connected = true; clearTimeout(timeout); setMenuLoading(false, '');
+          connected = true;
+          clearTimeout(relayNotice);
+          clearTimeout(timeout);
+          setMenuLoading(false, '');
           hostConn.send({ type: 'join', name, skin: myCosmetics.skin, hat: myCosmetics.hat });
         });
         hostConn.on('data', (msg) => handleClientPacket(msg));
-        hostConn.on('close', () => { showScreen(menuScreen); menuError.textContent = 'Chủ phòng đã đóng phòng hoặc mất kết nối.'; });
+        hostConn.on('error', () => {
+          if (!connected) {
+            clearTimeout(relayNotice);
+            clearTimeout(timeout);
+            setMenuLoading(false, 'Kết nối tới chủ phòng bị gián đoạn. Hãy thử bấm Vào Phòng lại!');
+          }
+        });
+        hostConn.on('close', () => {
+          if (connected) {
+            showScreen(menuScreen);
+            menuError.textContent = 'Chủ phòng đã đóng phòng hoặc mất kết nối.';
+          }
+        });
       });
 
       peer.on('error', (err) => {
+        clearTimeout(relayNotice);
         clearTimeout(timeout);
-        setMenuLoading(false, err.type === 'peer-unavailable' ? 'Không tìm thấy mã phòng ' + code + '!' : 'Lỗi kết nối (' + err.type + ').');
+        if (err.type === 'peer-unavailable') {
+          setMenuLoading(false, 'Không tìm thấy mã phòng ' + code + '! Hãy kiểm tra lại chữ cái.');
+        } else {
+          setMenuLoading(false, 'Lỗi kết nối (' + err.type + '). Hãy thử lại!');
+        }
       });
     });
 
@@ -3017,7 +3356,7 @@
       });
       hostBroadcast({
         type: 'toast',
-        message: `${list[seekerIdx].name} là NGƯỜI BẮT (Đỏ)! Mê cung 35×35 mới đã mở — chạy trốn 15s!`,
+        message: `${list[seekerIdx].name} là NGƯỜI BẮT (Ánh sáng đỏ)! Chạy trốn trong 15s!`,
         style: 'warning'
       });
     });
@@ -3082,7 +3421,6 @@
     });
     document.addEventListener('pointerlockchange', () => {
       if (document.pointerLockElement === gameCanvas) {
-        // Bỏ qua 90ms đầu ngay lúc khóa chuột để chặn cú nhảy tâm chuột của trình duyệt
         pointerLockGraceUntil = performance.now() + 90;
       }
       updateLockHint();
@@ -3099,8 +3437,6 @@
 
       const mx = e.movementX || 0;
       const my = e.movementY || 0;
-
-      // Chặn triệt để lỗi PointerLock bắn giá trị nhảy vọt trên Chrome/Edge Windows gây quay ngược 180 độ
       if (Math.abs(mx) > 220 || Math.abs(my) > 220) return;
 
       const clampedX = Math.max(-110, Math.min(110, mx));
@@ -3143,7 +3479,6 @@
 
     window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
 
-    // Joystick trái
     const joystickZone = document.getElementById('joystick-zone');
     const joystickBase = document.getElementById('joystick-base');
     const joystickKnob = document.getElementById('joystick-knob');
@@ -3419,7 +3754,7 @@
         b.life -= dt;
         const ratio = Math.max(0, b.life / b.maxLife);
         b.mesh.material.opacity = ratio * 0.58;
-        b.light.intensity = ratio * 3.2;
+        b.light.intensity = ratio * 3.6;
         if (b.life <= 0) {
           scene.remove(b.mesh); scene.remove(b.light);
           b.mesh.geometry.dispose(); b.mesh.material.dispose();
@@ -3487,11 +3822,15 @@
       const activeIds = new Set();
       const viewerX = localPlayer.initialized ? localPlayer.x : (meObj ? meObj.x : 0);
       const viewerY = localPlayer.initialized ? localPlayer.y : (meObj ? meObj.y : 0);
+      let seekerLightPos = null;
 
       renderPlayers.forEach(p => {
         activeIds.add(p.id);
         if (p.id === myId) {
           if (playerMeshes[p.id]) playerMeshes[p.id].mesh.visible = false;
+          if (p.role === 'seeker' && localPlayer.initialized) {
+            seekerLightPos = { x: localPlayer.x, y: localPlayer.y };
+          }
           return;
         }
 
@@ -3507,6 +3846,10 @@
         sp.yaw += dyaw * smoothAlpha;
         smoothPlayers[p.id] = sp;
 
+        if (p.role === 'seeker') {
+          seekerLightPos = { x: sp.x, y: sp.y };
+        }
+
         const entry = syncPlayerMesh3D(p);
         const visibleInWorld = (p.status !== 'eliminated');
         entry.mesh.visible = visibleInWorld;
@@ -3516,11 +3859,15 @@
           const ud = entry.mesh.userData;
 
           if (ud.spinWheel) ud.spinWheel.rotation.z += dt * 1.1;
+          if (ud.seekerAuraRing) {
+            const pulse = 1 + Math.sin(t * 6) * 0.14;
+            ud.seekerAuraRing.scale.set(pulse, pulse, 1);
+            ud.seekerAuraRing.material.opacity = 0.5 + Math.sin(t * 6) * 0.22;
+          }
 
           const showXrayForThis = seekerXrayPulseOn && p.role === 'hider' && p.status === 'alive';
           if (ud.xrayGroup) ud.xrayGroup.visible = showXrayForThis;
 
-          // Chỉ hiện bảng tên khi thực sự nhìn thấy trực tiếp (không bị tường che và trong tầm nhìn)
           if (entry.nameTag) {
             if (showXrayForThis) {
               entry.nameTag.visible = true;
@@ -3554,6 +3901,15 @@
           }
         }
       });
+
+      if (seekerLightPos && gamePhase !== 'ended') {
+        seekerRedLight.visible = true;
+        seekerRedLight.position.set(seekerLightPos.x * WORLD_SCALE, 1.85, seekerLightPos.y * WORLD_SCALE);
+        const baseIntensity = (meObj && meObj.role === 'seeker') ? 1.45 : 3.4;
+        seekerRedLight.intensity = baseIntensity + Math.sin(t * 5.5) * 0.45;
+      } else {
+        seekerRedLight.visible = false;
+      }
 
       for (const id in playerMeshes) {
         if (!activeIds.has(id)) {
