@@ -55,11 +55,11 @@
 
     .panel {
       width: 100%;
-      max-width: 515px;
+      max-width: 525px;
       background: rgba(22, 19, 9, 0.95);
       border: 2px solid #c7b152;
       border-radius: 14px;
-      padding: 16px;
+      padding: 15px;
       box-shadow: 0 0 38px rgba(214, 190, 82, 0.22);
       margin: auto;
       position: relative;
@@ -67,7 +67,7 @@
 
     .panel-top {
       position: relative;
-      margin-bottom: 12px;
+      margin-bottom: 11px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -94,7 +94,7 @@
 
     .title {
       text-align: center;
-      font-size: 1.48rem;
+      font-size: 1.46rem;
       letter-spacing: 2.2px;
       color: #f0da75;
       text-shadow: 0 0 12px rgba(240, 218, 117, 0.45);
@@ -103,13 +103,13 @@
 
     .subtitle {
       text-align: center;
-      font-size: 0.7rem;
-      letter-spacing: 1.3px;
+      font-size: 0.69rem;
+      letter-spacing: 1.2px;
       color: #b5a66b;
       margin-top: 2px;
     }
 
-    /* Tủ trang phục 3D */
+    /* Tủ trang phục 3D (Dùng cho cả Menu & Sảnh Chờ) */
     .wardrobe-box {
       display: flex;
       gap: 10px;
@@ -117,17 +117,24 @@
       border: 1px solid #594f23;
       border-radius: 10px;
       padding: 9px;
-      margin-bottom: 11px;
+      margin-bottom: 10px;
       align-items: center;
     }
 
+    .preview-slot {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
     #preview-3d-canvas {
-      width: 124px;
-      height: 158px;
+      width: 118px;
+      height: 156px;
       border-radius: 8px;
       background: radial-gradient(circle at center, #3f4669 0%, #191c2b 100%);
       border: 1px solid #6b5e29;
-      flex-shrink: 0;
+      display: block;
       cursor: grab;
       touch-action: none;
     }
@@ -135,9 +142,9 @@
     .wardrobe-controls { flex: 1; min-width: 0; }
 
     .w-label {
-      font-size: 0.7rem;
+      font-size: 0.69rem;
       color: #d6c57a;
-      margin-bottom: 5px;
+      margin-bottom: 4px;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.4px;
@@ -146,14 +153,14 @@
     .skin-grid {
       display: grid;
       grid-template-columns: repeat(8, 1fr);
-      gap: 5px;
-      margin-bottom: 8px;
+      gap: 4px;
+      margin-bottom: 7px;
     }
 
     .skin-dot {
       width: 100%;
       aspect-ratio: 1 / 1;
-      max-width: 24px;
+      max-width: 22px;
       border-radius: 50%;
       border: 2px solid rgba(255, 255, 255, 0.25);
       cursor: pointer;
@@ -163,15 +170,15 @@
 
     .skin-dot.selected {
       border-color: #f0da75;
-      transform: scale(1.2);
-      box-shadow: 0 0 8px rgba(240, 218, 117, 0.9);
+      transform: scale(1.22);
+      box-shadow: 0 0 8px rgba(240, 218, 117, 0.92);
     }
 
     .hat-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 4px;
-      max-height: 130px;
+      max-height: 114px;
       overflow-y: auto;
       padding-right: 3px;
       scrollbar-width: thin;
@@ -180,7 +187,7 @@
 
     .hat-btn {
       padding: 5px 4px;
-      font-size: 0.7rem;
+      font-size: 0.69rem;
       background: #282311;
       color: #dfd4a6;
       border: 1px solid #5e5324;
@@ -298,7 +305,7 @@
       border-radius: 10px;
       padding: 8px;
       margin-bottom: 8px;
-      max-height: 145px;
+      max-height: 140px;
       overflow-y: auto;
     }
     .player-list-box h3 { font-size: 0.81rem; color: #d6c57a; margin-bottom: 5px; }
@@ -320,7 +327,7 @@
     .lobby-actions { display: flex; gap: 8px; margin-bottom: 8px; }
 
     .rules-mini {
-      font-size: 0.73rem;
+      font-size: 0.72rem;
       line-height: 1.4;
       color: #cfc491;
       background: rgba(227, 200, 82, 0.08);
@@ -717,24 +724,25 @@
     /* Tối ưu cho điện thoại xoay ngang */
     @media (max-height: 520px) and (orientation: landscape) {
       .panel.menu-panel, .panel.lobby-panel {
-        max-width: min(95vw, 780px);
-        padding: 11px 14px;
+        max-width: min(95vw, 800px);
+        padding: 10px 14px;
       }
-      .title { font-size: 1.18rem; padding: 0 92px; }
-      .subtitle { font-size: 0.65rem; }
-      .panel-top { margin-bottom: 7px; }
+      .title { font-size: 1.16rem; padding: 0 92px; }
+      .subtitle { font-size: 0.64rem; }
+      .panel-top { margin-bottom: 6px; }
 
       .menu-body, .lobby-body {
         display: grid;
-        grid-template-columns: 1.12fr 0.88fr;
+        grid-template-columns: 1.18fr 0.82fr;
         gap: 11px;
         align-items: start;
       }
-      .wardrobe-box { margin-bottom: 0; padding: 7px; }
-      #preview-3d-canvas { width: 102px; height: 132px; }
-      .hat-grid { max-height: 92px; }
-      .player-list-box { max-height: 108px; margin-bottom: 6px; }
-      .rules-mini { font-size: 0.68rem; padding: 5px 7px; margin-bottom: 6px; }
+      .wardrobe-box { margin-bottom: 6px; padding: 7px; gap: 8px; }
+      #preview-3d-canvas { width: 96px; height: 126px; }
+      .skin-grid { gap: 3px; margin-bottom: 5px; }
+      .hat-grid { max-height: 82px; }
+      .player-list-box { max-height: 110px; margin-bottom: 6px; }
+      .rules-mini { font-size: 0.67rem; padding: 5px 7px; margin-bottom: 0; }
       .divider { margin: 7px 0; }
       .input-group { margin-bottom: 7px; }
       input[type="text"] { padding: 7px 10px; font-size: 0.86rem; }
@@ -812,7 +820,7 @@
     <div class="panel menu-panel">
       <div class="panel-top">
         <h1 class="title">THE BACKROOMS 3D</h1>
-        <p class="subtitle">MÊ CUNG NGẪU NHIÊN 35&times;35 &bull; 20 NGƯỜI &bull; 16 MÀU &amp; 10 PHỤ KIỆN</p>
+        <p class="subtitle">MÊ CUNG NGẪU NHIÊN 35&times;35 &bull; 20 NGƯỜI &bull; 24 MÀU &amp; 10 PHỤ KIỆN</p>
         <div class="top-corner-btns">
           <button id="btn-menu-settings" type="button" class="btn-corner">⚙️</button>
           <button id="btn-menu-fs" type="button" class="btn-corner">⛶ Full</button>
@@ -821,9 +829,11 @@
 
       <div class="menu-body">
         <div class="wardrobe-box">
-          <canvas id="preview-3d-canvas" width="248" height="316"></canvas>
+          <div id="menu-preview-host" class="preview-slot">
+            <canvas id="preview-3d-canvas" width="236" height="312"></canvas>
+          </div>
           <div class="wardrobe-controls">
-            <div class="w-label">Màu Skin (16 Màu)</div>
+            <div class="w-label">Màu Skin (24 Màu)</div>
             <div id="menu-skin-grid" class="skin-grid"></div>
 
             <div class="w-label">Phụ kiện Đầu / Mặt (Cuộn thêm)</div>
@@ -852,7 +862,7 @@
     </div>
   </div>
 
-  <!-- MÀN HÌNH SẢNH CHỜ -->
+  <!-- MÀN HÌNH SẢNH CHỜ (CÓ XEM TRƯỚC SKIN 3D TRỰC TIẾP) -->
   <div id="lobby-screen" class="screen">
     <div class="panel lobby-panel">
       <div class="room-header">
@@ -876,10 +886,12 @@
             </div>
           </div>
 
-          <div class="wardrobe-box" style="padding:8px; margin-bottom:8px;">
+          <div class="wardrobe-box">
+            <div id="lobby-preview-host" class="preview-slot"></div>
             <div class="wardrobe-controls">
-              <div class="w-label">Trang phục của bạn</div>
-              <div id="lobby-skin-grid" class="skin-grid" style="margin-bottom:6px;"></div>
+              <div class="w-label">Màu Skin (24 Màu)</div>
+              <div id="lobby-skin-grid" class="skin-grid"></div>
+              <div class="w-label">Phụ kiện Đầu / Mặt</div>
               <div id="lobby-hat-grid" class="hat-grid"></div>
             </div>
           </div>
@@ -1009,12 +1021,12 @@
     // =========================================================================
     // KHU VỰC TỰ CHỈNH THÔNG SỐ GAME (ĐÃ GIỮ ĐÚNG CÁC SỐ BẠN VỪA SỬA)
     // =========================================================================
-    const XRAY_ON_SEC = 4;          // Thời gian nháy nhìn xuyên tường (giây) -> Muốn lâu hơn thì tăng số này (VD: 5, 6)
+    const XRAY_ON_SEC = 4;          // Thời gian nháy nhìn xuyên tường (giây)
     const XRAY_OFF_SEC = 8;         // Thời gian tắt nghỉ giữa các lần nháy (giây)
     const FLASH_RANGE = 446;        // Tầm chiếu sáng Đèn Pin (64 = 1 ô bản đồ)
-    const FLASH_HALF_ANGLE = 0.70;  // Độ rộng góc chiếu Đèn Pin (radian; càng lớn góc chiếu càng rộng)
+    const FLASH_HALF_ANGLE = 0.70;  // Độ rộng góc chiếu Đèn Pin (radian)
     const BLIND_DURATION = 5;       // Thời gian Người Bắt bị chói trắng màn hình (giây)
-    const SEEKER_LIGHT_RANGE = 24;  // Tầm hắt ánh sáng đỏ cảnh báo quanh Người Bắt (mét; 4 mét = 1 ô)
+    const SEEKER_LIGHT_RANGE = 24;  // Tầm hắt ánh sáng đỏ cảnh báo quanh Người Bắt (mét)
     const SEEKER_SPEED = 236;       // Tốc độ chạy của Người Bắt
     const HIDER_SPEED = 206;        // Tốc độ chạy của Người Chạy
     const JAIL_LOCK_SECONDS = 20;   // Thời gian khóa cứu trong Lồng Giam (giây)
@@ -1035,23 +1047,34 @@
     document.getElementById('lobby-rules-text').innerHTML =
       `<b>Luật chơi:</b> Map 35&times;35 ngẫu nhiên. Người Bắt phát <b>ánh sáng đỏ</b> khi lại gần. Bị bắt vào <b>Lồng Giam</b> khóa cứu <b>${JAIL_LOCK_SECONDS}s</b>. Nhặt <b>🔦 Đèn Pin</b> (tối đa ${MAX_ITEMS_TOTAL} cây) chiếu làm <b>chói trắng Người Bắt ${BLIND_DURATION}s</b>. Còn <b>1 phút cuối</b>, Thấu Thị nháy <b>${XRAY_ON_SEC}s/${XRAY_OFF_SEC}s</b> và bị bắt thua ngay!`;
 
+    // 24 màu Skin phong phú (3 hàng x 8 màu, dành riêng màu đỏ đậm cho Người Bắt)
     const SKINS = [
-      { id: 'white',   name: 'Trắng Gốc',     hex: 0xf1f3f8, css: '#f1f3f8' },
-      { id: 'silver',  name: 'Bạc Khói',      hex: 0x94a3b8, css: '#94a3b8' },
-      { id: 'black',   name: 'Đen Huyền',     hex: 0x262933, css: '#262933' },
-      { id: 'navy',    name: 'Xanh Hoàng Gia',hex: 0x1e3a8a, css: '#1e3a8a' },
-      { id: 'blue',    name: 'Xanh Dương',    hex: 0x3b82f6, css: '#3b82f6' },
-      { id: 'cyan',    name: 'Xanh Neon',     hex: 0x22d3ee, css: '#22d3ee' },
-      { id: 'teal',    name: 'Xanh Ngọc',     hex: 0x14b8a6, css: '#14b8a6' },
-      { id: 'green',   name: 'Xanh Lá',       hex: 0x22c55e, css: '#22c55e' },
-      { id: 'lime',    name: 'Xanh Chanh',    hex: 0xa3e635, css: '#a3e635' },
-      { id: 'yellow',  name: 'Vàng Tươi',     hex: 0xfacc15, css: '#facc15' },
-      { id: 'gold',    name: 'Vàng Đồng',     hex: 0xd97706, css: '#d97706' },
-      { id: 'orange',  name: 'Cam Rực',       hex: 0xfb923c, css: '#fb923c' },
-      { id: 'coral',   name: 'Hồng San Hô',   hex: 0xfb7185, css: '#fb7185' },
-      { id: 'pink',    name: 'Hồng Đào',      hex: 0xf472b6, css: '#f472b6' },
-      { id: 'purple',  name: 'Tím Mộng',      hex: 0xa855f7, css: '#a855f7' },
-      { id: 'brown',   name: 'Nâu Đất',       hex: 0x78350f, css: '#78350f' }
+      { id: 'white',   name: 'Trắng Gốc',      hex: 0xf1f3f8, css: '#f1f3f8' },
+      { id: 'cream',   name: 'Kem Sữa',        hex: 0xfef3c7, css: '#fef3c7' },
+      { id: 'silver',  name: 'Bạc Khói',       hex: 0x94a3b8, css: '#94a3b8' },
+      { id: 'slate',   name: 'Xám Chì',        hex: 0x475569, css: '#475569' },
+      { id: 'black',   name: 'Đen Huyền',      hex: 0x262933, css: '#262933' },
+      { id: 'navy',    name: 'Xanh Hoàng Gia', hex: 0x1e3a8a, css: '#1e3a8a' },
+      { id: 'indigo',  name: 'Xanh Chàm',      hex: 0x4f46e5, css: '#4f46e5' },
+      { id: 'blue',    name: 'Xanh Dương',     hex: 0x3b82f6, css: '#3b82f6' },
+
+      { id: 'sky',     name: 'Xanh Trời',      hex: 0x38bdf8, css: '#38bdf8' },
+      { id: 'cyan',    name: 'Xanh Neon',      hex: 0x22d3ee, css: '#22d3ee' },
+      { id: 'mint',    name: 'Bạc Hà',         hex: 0x6ee7b7, css: '#6ee7b7' },
+      { id: 'teal',    name: 'Xanh Ngọc',      hex: 0x14b8a6, css: '#14b8a6' },
+      { id: 'emerald', name: 'Xanh Lục Bảo',   hex: 0x10b981, css: '#10b981' },
+      { id: 'green',   name: 'Xanh Lá',        hex: 0x22c55e, css: '#22c55e' },
+      { id: 'lime',    name: 'Xanh Chanh',     hex: 0xa3e635, css: '#a3e635' },
+      { id: 'olive',   name: 'Xanh Rêu',       hex: 0x65a30d, css: '#65a30d' },
+
+      { id: 'yellow',  name: 'Vàng Tươi',      hex: 0xfacc15, css: '#facc15' },
+      { id: 'gold',    name: 'Vàng Đồng',      hex: 0xd97706, css: '#d97706' },
+      { id: 'orange',  name: 'Cam Rực',        hex: 0xfb923c, css: '#fb923c' },
+      { id: 'coral',   name: 'Hồng San Hô',    hex: 0xfb7185, css: '#fb7185' },
+      { id: 'pink',    name: 'Hồng Đào',       hex: 0xf472b6, css: '#f472b6' },
+      { id: 'magenta', name: 'Hồng Cánh Sen',  hex: 0xe879f9, css: '#e879f9' },
+      { id: 'purple',  name: 'Tím Mộng',       hex: 0xa855f7, css: '#a855f7' },
+      { id: 'brown',   name: 'Nâu Đất',        hex: 0x78350f, css: '#78350f' }
     ];
 
     const HATS = [
@@ -1419,7 +1442,7 @@
     }
 
     // =========================================================================
-    // 3. MÔ HÌNH 3D NHÂN VẬT + 9 PHỤ KIỆN (GỒM MẶT ẾCH & MẶT NẠ SHIBA ROBLOX)
+    // 3. MÔ HÌNH 3D NHÂN VẬT + 9 PHỤ KIỆN (NÓN HUTAO, FURINA, OBITO, MAHORAGA, GOJO, ẾCH, SHIBA...)
     // =========================================================================
     function createTalismanTexture() {
       const c = document.createElement('canvas'); c.width = 128; c.height = 160;
@@ -1480,7 +1503,6 @@
     }
     const obitoMaskTex = createObitoMaskTexture();
 
-    // Họa tiết da sần xanh lá đặc trưng cho Mặt ếch
     function createFrogSkinTexture() {
       const c = document.createElement('canvas'); c.width = 256; c.height = 256;
       const g = c.getContext('2d');
@@ -1500,7 +1522,6 @@
     }
     const frogSkinTex = createFrogSkinTexture();
 
-    // Họa tiết lông vàng-kem đặc trưng cho Mặt nạ Shiba (Doge Roblox)
     function createShibaFurTexture() {
       const c = document.createElement('canvas'); c.width = 256; c.height = 256;
       const g = c.getContext('2d');
@@ -1519,12 +1540,11 @@
     }
     const shibaFurTex = createShibaFurTexture();
 
-    // Họa tiết kính pixel đen trắng "Deal With It" sắc nét
     function createPixelShadesTexture() {
       const c = document.createElement('canvas'); c.width = 240; c.height = 60;
       const g = c.getContext('2d');
       g.clearRect(0, 0, 240, 60);
-      const p = 10; // Kích thước 1 ô pixel (24x6)
+      const p = 10;
       const rows = [
         "111111111111111111111111",
         "112121111111112121111111",
@@ -1753,7 +1773,6 @@
         g.add(centerSpike);
 
       } else if (hatId === 'frog') {
-        // Mặt ếch xanh lá sần + mắt vàng lồi + 2 lỗ mũi đen + môi vàng chu dày
         const greenMat = new THREE.MeshStandardMaterial({ map: frogSkinTex, roughness: 0.62, metalness: 0.05 });
         const lipMat = new THREE.MeshStandardMaterial({ color: 0xebd71c, roughness: 0.42, metalness: 0.04 });
         const eyeYMat = new THREE.MeshStandardMaterial({ color: 0xe6cb25, roughness: 0.28 });
@@ -1761,24 +1780,20 @@
         const holeMat = new THREE.MeshBasicMaterial({ color: 0x0b0e08 });
         const glintMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
 
-        // Đầu chính trùm kín đầu nhân vật
         const headCover = new THREE.Mesh(new THREE.SphereGeometry(0.248, 22, 18), greenMat);
         headCover.scale.set(0.96, 1.15, 1.06);
         headCover.position.set(0, 0.01, -0.01);
         g.add(headCover);
 
-        // Cổ trùm nhẹ bên dưới
         const neckCover = new THREE.Mesh(new THREE.CylinderGeometry(0.185, 0.16, 0.16, 18), greenMat);
         neckCover.position.set(0, -0.22, 0.01);
         g.add(neckCover);
 
-        // Phần mặt trước nhô ra hình mõm
         const snout = new THREE.Mesh(new THREE.SphereGeometry(0.18, 18, 14), greenMat);
         snout.scale.set(0.86, 1.02, 1.02);
         snout.position.set(0, -0.05, -0.15);
         g.add(snout);
 
-        // 2 gờ vây/tai nhẹ hai bên đầu
         [-1, 1].forEach(side => {
           const ridge = new THREE.Mesh(new THREE.SphereGeometry(0.085, 12, 10), greenMat);
           ridge.scale.set(0.32, 1.35, 0.68);
@@ -1787,32 +1802,26 @@
           g.add(ridge);
         });
 
-        // 2 mắt vàng lồi to + con ngươi đen bóng + đốm sáng
         [-1, 1].forEach(side => {
           const eyeGroup = new THREE.Group();
           eyeGroup.position.set(side * 0.155, 0.085, -0.145);
           eyeGroup.rotation.y = side * 0.62;
 
-          const lid = new THREE.Mesh(new THREE.TorusGeometry(0.066, 0.015, 8, 18), greenMat);
-          eyeGroup.add(lid);
-
+          eyeGroup.add(new THREE.Mesh(new THREE.TorusGeometry(0.066, 0.015, 8, 18), greenMat));
           const eyeball = new THREE.Mesh(new THREE.SphereGeometry(0.064, 16, 12), eyeYMat);
           eyeball.scale.set(1, 1, 0.72);
           eyeGroup.add(eyeball);
 
           const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.041, 14, 10), pupilMat);
-          pupil.scale.set(1, 1, 0.6);
-          pupil.position.z = -0.032;
+          pupil.scale.set(1, 1, 0.6); pupil.position.z = -0.032;
           eyeGroup.add(pupil);
 
           const glint = new THREE.Mesh(new THREE.SphereGeometry(0.011, 8, 8), glintMat);
           glint.position.set(side * -0.014, 0.016, -0.055);
           eyeGroup.add(glint);
-
           g.add(eyeGroup);
         });
 
-        // 2 lỗ mũi phồng giữa mặt
         [-1, 1].forEach(side => {
           const bump = new THREE.Mesh(new THREE.SphereGeometry(0.044, 12, 10), greenMat);
           bump.scale.set(1.05, 0.9, 0.85);
@@ -1825,24 +1834,19 @@
           g.add(hole);
         });
 
-        // Đôi môi vàng dày chu ra đặc trưng
         const upperLip = new THREE.Mesh(new THREE.SphereGeometry(0.088, 16, 12), lipMat);
-        upperLip.scale.set(1.18, 0.56, 0.72);
-        upperLip.position.set(0, -0.105, -0.275);
+        upperLip.scale.set(1.18, 0.56, 0.72); upperLip.position.set(0, -0.105, -0.275);
         g.add(upperLip);
 
         const lowerLip = new THREE.Mesh(new THREE.SphereGeometry(0.086, 16, 12), lipMat);
-        lowerLip.scale.set(1.12, 0.58, 0.70);
-        lowerLip.position.set(0, -0.165, -0.268);
+        lowerLip.scale.set(1.12, 0.58, 0.70); lowerLip.position.set(0, -0.165, -0.268);
         g.add(lowerLip);
 
         const mouthHole = new THREE.Mesh(new THREE.SphereGeometry(0.044, 12, 8), holeMat);
-        mouthHole.scale.set(1.35, 0.36, 0.6);
-        mouthHole.position.set(0, -0.135, -0.320);
+        mouthHole.scale.set(1.35, 0.36, 0.6); mouthHole.position.set(0, -0.135, -0.320);
         g.add(mouthHole);
 
       } else if (hatId === 'shiba') {
-        // Mặt nạ Shiba (Doge Roblox) + Kính đen pixel "Deal With It"
         const furMat = new THREE.MeshStandardMaterial({ map: shibaFurTex, roughness: 0.72, metalness: 0.02 });
         const creamMat = new THREE.MeshStandardMaterial({ color: 0xf4ead0, roughness: 0.75 });
         const earOuterMat = new THREE.MeshStandardMaterial({ color: 0xc99342, roughness: 0.72 });
@@ -1850,79 +1854,55 @@
         const noseMat = new THREE.MeshStandardMaterial({ color: 0x1a1715, roughness: 0.28, metalness: 0.15 });
         const shadeDarkMat = new THREE.MeshStandardMaterial({ color: 0x101014, roughness: 0.3 });
 
-        // Đầu tròn bầu bĩnh của Shiba
         const headBall = new THREE.Mesh(new THREE.SphereGeometry(0.255, 22, 18), furMat);
-        headBall.scale.set(1.06, 1.0, 1.04);
-        headBall.position.set(0, 0.01, 0);
+        headBall.scale.set(1.06, 1.0, 1.04); headBall.position.set(0, 0.01, 0);
         g.add(headBall);
 
-        // Hai má phúng phính màu kem
         [-1, 1].forEach(side => {
           const cheek = new THREE.Mesh(new THREE.SphereGeometry(0.135, 14, 12), creamMat);
-          cheek.scale.set(1.0, 0.85, 0.92);
-          cheek.position.set(side * 0.155, -0.06, -0.09);
+          cheek.scale.set(1.0, 0.85, 0.92); cheek.position.set(side * 0.155, -0.06, -0.09);
           g.add(cheek);
         });
 
-        // Mõm Shiba nhô ra phía trước (-Z)
         const muzzle = new THREE.Mesh(new THREE.ConeGeometry(0.145, 0.26, 16), creamMat);
-        muzzle.rotation.x = -Math.PI / 2;
-        muzzle.scale.set(1.08, 1.0, 0.82);
-        muzzle.position.set(0, -0.045, -0.24);
+        muzzle.rotation.x = -Math.PI / 2; muzzle.scale.set(1.08, 1.0, 0.82); muzzle.position.set(0, -0.045, -0.24);
         g.add(muzzle);
 
         const muzzleBridge = new THREE.Mesh(new THREE.SphereGeometry(0.115, 14, 10), furMat);
-        muzzleBridge.scale.set(0.95, 0.72, 1.25);
-        muzzleBridge.position.set(0, 0.0, -0.21);
+        muzzleBridge.scale.set(0.95, 0.72, 1.25); muzzleBridge.position.set(0, 0.0, -0.21);
         g.add(muzzleBridge);
 
-        // Chóp mũi đen bóng
         const nose = new THREE.Mesh(new THREE.SphereGeometry(0.056, 14, 10), noseMat);
-        nose.scale.set(1.18, 0.88, 0.9);
-        nose.position.set(0, -0.025, -0.355);
+        nose.scale.set(1.18, 0.88, 0.9); nose.position.set(0, -0.025, -0.355);
         g.add(nose);
 
-        // Nét miệng mỉm cười nhẹ hai bên mõm
         [-1, 1].forEach(side => {
           const smirk = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.014, 0.13), noseMat);
           smirk.position.set(side * 0.095, -0.105, -0.255);
-          smirk.rotation.y = side * 0.36;
-          smirk.rotation.x = -0.14;
+          smirk.rotation.y = side * 0.36; smirk.rotation.x = -0.14;
           g.add(smirk);
         });
 
-        // Hai tai tam giác dựng nhọn
         [-1, 1].forEach(side => {
           const earGrp = new THREE.Group();
           earGrp.position.set(side * 0.165, 0.225, 0.02);
-          earGrp.rotation.z = side * -0.32;
-          earGrp.rotation.x = -0.12;
-          earGrp.rotation.y = side * -0.22;
+          earGrp.rotation.z = side * -0.32; earGrp.rotation.x = -0.12; earGrp.rotation.y = side * -0.22;
 
           const outerEar = new THREE.Mesh(new THREE.ConeGeometry(0.088, 0.20, 4), earOuterMat);
-          outerEar.scale.set(1.0, 1.0, 0.55);
-          earGrp.add(outerEar);
+          outerEar.scale.set(1.0, 1.0, 0.55); earGrp.add(outerEar);
 
           const innerEar = new THREE.Mesh(new THREE.ConeGeometry(0.054, 0.13, 4), earInnerMat);
-          innerEar.scale.set(1.0, 1.0, 0.45);
-          innerEar.position.set(0, -0.015, -0.022);
-          earGrp.add(innerEar);
-
+          innerEar.scale.set(1.0, 1.0, 0.45); innerEar.position.set(0, -0.015, -0.022); earGrp.add(innerEar);
           g.add(earGrp);
         });
 
-        // Kính đen pixel "Deal With It" (mặt trước + 2 gọng kính ôm hai bên đầu)
         const shadesFront = new THREE.Mesh(
           new THREE.PlaneGeometry(0.56, 0.14),
-          new THREE.MeshBasicMaterial({
-            map: pixelShadesTex, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide
-          })
+          new THREE.MeshBasicMaterial({ map: pixelShadesTex, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide })
         );
-        shadesFront.position.set(0, 0.068, -0.268);
-        shadesFront.rotation.y = Math.PI; // Quay mặt trước ra -Z
+        shadesFront.position.set(0, 0.068, -0.268); shadesFront.rotation.y = Math.PI;
         g.add(shadesFront);
 
-        // Khối dày mảnh sau mặt kính tạo cảm giác 3D
         const shadesTopBar = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.026, 0.022), shadeDarkMat);
         shadesTopBar.position.set(0, 0.122, -0.256);
         g.add(shadesTopBar);
@@ -2098,13 +2078,18 @@
     }
 
     // =========================================================================
-    // 4. XEM TRƯỚC 3D TRONG TỦ TRANG PHỤC
+    // 4. XEM TRƯỚC 3D TRONG TỦ TRANG PHỤC (TỰ CHUYỂN GIỮA MENU & PHÒNG CHỜ)
     // =========================================================================
     const previewCanvas = document.getElementById('preview-3d-canvas');
+    const menuPreviewHost = document.getElementById('menu-preview-host');
+    const lobbyPreviewHost = document.getElementById('lobby-preview-host');
+
     const previewRenderer = new THREE.WebGLRenderer({ canvas: previewCanvas, alpha: true, antialias: true });
-    previewRenderer.setSize(124, 158, false);
+    previewRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    previewRenderer.setSize(118, 156, false);
+
     const previewScene = new THREE.Scene();
-    const previewCamera = new THREE.PerspectiveCamera(42, 124 / 158, 0.1, 20);
+    const previewCamera = new THREE.PerspectiveCamera(42, 118 / 156, 0.1, 20);
     previewCamera.position.set(0, 1.32, 3.85);
     previewCamera.lookAt(0, 1.18, 0);
 
@@ -2125,8 +2110,13 @@
     }
 
     let dragPreview = false, lastPx = 0;
-    previewCanvas.addEventListener('pointerdown', (e) => { dragPreview = true; lastPx = e.clientX; });
+    previewCanvas.addEventListener('pointerdown', (e) => {
+      dragPreview = true;
+      lastPx = e.clientX;
+      previewCanvas.setPointerCapture?.(e.pointerId);
+    });
     window.addEventListener('pointerup', () => { dragPreview = false; });
+    window.addEventListener('pointercancel', () => { dragPreview = false; });
     window.addEventListener('pointermove', (e) => {
       if (!dragPreview) return;
       previewAngle += (e.clientX - lastPx) * 0.016;
@@ -2449,7 +2439,7 @@
     }
 
     // =========================================================================
-    // 6. CẤU HÌNH MẠNG PEERJS CÓ TURN RELAY (VƯỢT TƯỜNG LỬA 4G/5G/NAT CHẶT)
+    // 6. CẤU HÌNH MẠNG PEERJS CÓ TURN RELAY
     // =========================================================================
     const PEER_CONFIG = {
       pingInterval: 5000,
@@ -2460,7 +2450,6 @@
           { urls: 'stun:stun2.l.google.com:19302' },
           { urls: 'stun:stun.cloudflare.com:3478' },
           { urls: 'stun:openrelay.metered.ca:80' },
-          // Máy chủ trung gian TURN (vượt tường lửa 4G/5G & Wi-Fi chặn P2P qua cổng 80/443)
           {
             urls: 'turn:openrelay.metered.ca:80',
             username: 'openrelayproject',
@@ -2551,6 +2540,12 @@
     function showScreen(sc) {
       [menuScreen, lobbyScreen, gameScreen].forEach(s => s.classList.remove('active'));
       sc.classList.add('active');
+      // Chuyển khung xem trước 3D sang đúng màn hình đang mở (Menu hoặc Sảnh Chờ)
+      if (sc === menuScreen && previewCanvas.parentNode !== menuPreviewHost) {
+        menuPreviewHost.appendChild(previewCanvas);
+      } else if (sc === lobbyScreen && previewCanvas.parentNode !== lobbyPreviewHost) {
+        lobbyPreviewHost.appendChild(previewCanvas);
+      }
       if (sc !== gameScreen && document.pointerLockElement) document.exitPointerLock();
     }
 
@@ -3111,7 +3106,7 @@
     }
 
     // =========================================================================
-    // 7. SỰ KIỆN MENU & LOBBY (TỰ ĐỘNG GIỮ KẾT NỐI TÍN HIỆU + VƯỢT NAT)
+    // 7. SỰ KIỆN MENU & LOBBY
     // =========================================================================
     function setMenuLoading(loading, text) {
       btnCreate.disabled = loading;
@@ -3158,7 +3153,6 @@
         hostEmitLobby();
       });
 
-      // Giữ kết nối tới máy chủ tín hiệu luôn sống để bạn B vào sau vẫn tìm thấy phòng!
       peer.on('disconnected', () => {
         if (peer && !peer.destroyed) {
           setTimeout(() => {
@@ -3705,7 +3699,8 @@
       lastFrameTime = now;
       const t = now / 1000;
 
-      if (menuScreen.classList.contains('active') && previewChar) {
+      // Render nhân vật xem trước 3D ở cả Menu bên ngoài lẫn Sảnh Chờ trong phòng
+      if ((menuScreen.classList.contains('active') || lobbyScreen.classList.contains('active')) && previewChar) {
         if (!dragPreview) previewAngle += 0.008;
         previewChar.rotation.y = previewAngle;
         previewChar.position.y = Math.sin(t * 2.5) * 0.04;
