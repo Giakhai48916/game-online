@@ -499,20 +499,6 @@ input[type="range"] { width: 100%; accent-color: #e3c852; height: 24px; cursor: 
   display: block;
 }
 
-#minimap-compass {
-  position: absolute;
-  top: 4px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 0.56rem;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-  color: #4ade80;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
-  pointer-events: none;
-  white-space: nowrap;
-}
-
 #pc-lock-hint {
   position: fixed; top: 50%; left: 50%; transform: translate(-50%, 34px);
   background: rgba(16, 14, 6, 0.88); border: 1px solid #c7b152; color: #f0da75;
@@ -633,7 +619,6 @@ input[type="range"] { width: 100%; accent-color: #e3c852; height: 24px; cursor: 
   .hud-box, .hud-btn { padding: 3px 7px; font-size: 0.69rem; }
   .hud-timer { font-size: 0.77rem; }
   #minimap-wrap { width: 92px; height: 92px; top: calc(6px + env(safe-area-inset-top)); right: calc(10px + env(safe-area-inset-right)); }
-  #minimap-compass { font-size: 0.5rem; top: 3px; }
   #toast-container { top: calc(50px + env(safe-area-inset-top)); }
 
   #joystick-zone { bottom: calc(8px + env(safe-area-inset-bottom)); left: calc(16px + env(safe-area-inset-left)); width: 118px; height: 118px; }
@@ -645,7 +630,6 @@ input[type="range"] { width: 100%; accent-color: #e3c852; height: 24px; cursor: 
 
 @media (min-width: 768px) and (min-height: 600px) {
   #minimap-wrap { width: 142px; height: 142px; top: calc(12px + env(safe-area-inset-top)); right: calc(14px + env(safe-area-inset-right)); }
-  #minimap-compass { font-size: 0.64rem; top: 5px; }
   .hud-box, .hud-btn { padding: 6px 11px; font-size: 0.84rem; }
   .hud-timer { font-size: 0.96rem; }
   #joystick-zone { bottom: calc(28px + env(safe-area-inset-bottom)); left: calc(28px + env(safe-area-inset-left)); width: 162px; height: 162px; }
@@ -653,4 +637,104 @@ input[type="range"] { width: 100%; accent-color: #e3c852; height: 24px; cursor: 
   #joystick-knob { width: 58px; height: 58px; }
   #btn-mobile-rescue { bottom: calc(32px + env(safe-area-inset-bottom)); right: calc(30px + env(safe-area-inset-right)); width: 94px; height: 94px; font-size: 1.32rem; }
   #btn-mobile-flash { bottom: calc(38px + env(safe-area-inset-bottom)); right: calc(140px + env(safe-area-inset-right)); width: 84px; height: 84px; font-size: 1rem; }
+}
+
+/* Hiệu ứng bị choáng (đứng im 5s) khi trúng tia Gaster Blaster */
+#stun-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 24;
+  box-shadow: inset 0 0 110px rgba(56, 189, 248, 0.9), inset 0 0 28px rgba(255, 255, 255, 0.65);
+  animation: stunPulse 0.45s infinite alternate;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: calc(92px + env(safe-area-inset-bottom));
+}
+@keyframes stunPulse {
+  from { box-shadow: inset 0 0 75px rgba(14, 165, 233, 0.72), inset 0 0 18px rgba(224, 242, 254, 0.45); }
+  to { box-shadow: inset 0 0 125px rgba(56, 189, 248, 0.96), inset 0 0 34px rgba(255, 255, 255, 0.85); }
+}
+.stun-banner {
+  background: rgba(6, 14, 28, 0.88);
+  border: 2px solid #38bdf8;
+  border-radius: 12px;
+  padding: 9px 18px;
+  text-align: center;
+  box-shadow: 0 0 24px rgba(56, 189, 248, 0.8);
+}
+.stun-title {
+  color: #e0f2fe;
+  font-size: 1.05rem;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  text-shadow: 0 0 10px #38bdf8;
+}
+.stun-sub {
+  color: #7dd3fc;
+  font-size: 0.82rem;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+/* HUD & Nút kỹ năng ẩn Gaster Blaster (chỉ hiển thị cho Sans khi làm Người Bắt) */
+#hud-blaster-badge {
+  background: rgba(12, 24, 46, 0.92);
+  border-color: #38bdf8;
+  color: #bae6fd;
+}
+#hud-blaster-badge.ready {
+  background: linear-gradient(135deg, #0284c7, #38bdf8);
+  border-color: #ffffff;
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.95);
+}
+
+#blaster-prompt {
+  background: linear-gradient(135deg, #0369a1, #38bdf8);
+  border: 1.5px solid #e0f2fe;
+  color: #ffffff;
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.9);
+}
+
+#btn-mobile-blaster {
+  position: fixed;
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  right: calc(18px + env(safe-area-inset-right));
+  width: 82px;
+  height: 82px;
+  border-radius: 50%;
+  border: 3px solid #e0f2fe;
+  background: radial-gradient(circle, #38bdf8 0%, #0369a1 72%, #082f49 100%);
+  color: #ffffff;
+  font-size: 0.92rem;
+  font-weight: 900;
+  pointer-events: auto;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
+  opacity: 0.48;
+  transition: transform 0.08s, opacity 0.15s, box-shadow 0.15s;
+  line-height: 1.15;
+}
+#btn-mobile-blaster.ready {
+  opacity: 1;
+  box-shadow: 0 0 28px rgba(56, 189, 248, 0.98), 0 0 10px rgba(255, 255, 255, 0.8);
+}
+#btn-mobile-blaster:active { transform: scale(0.9); }
+
+@media (max-height: 520px) and (orientation: landscape) {
+  #btn-mobile-blaster {
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    right: calc(16px + env(safe-area-inset-right));
+    width: 72px; height: 72px; font-size: 0.84rem;
+  }
+  #stun-overlay { padding-bottom: calc(56px + env(safe-area-inset-bottom)); }
+}
+
+@media (min-width: 768px) and (min-height: 600px) {
+  #btn-mobile-blaster {
+    bottom: calc(32px + env(safe-area-inset-bottom));
+    right: calc(30px + env(safe-area-inset-right));
+    width: 96px; height: 96px; font-size: 1.05rem;
+  }
 }

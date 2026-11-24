@@ -904,19 +904,23 @@ function buildSansCharacterMesh(isSeeker = false, includeXray = false) {
   });
   const boneMat = new THREE.MeshStandardMaterial({ color: 0xe6dfd4, roughness: 0.58, metalness: 0.02 });
   const hoodieMat = new THREE.MeshStandardMaterial({
-    map: isSeeker ? sansHoodieTexRed : sansHoodieTexBlue,
-    roughness: 0.68, metalness: 0.03,
+    map: sansHoodieTexBlue,
+    roughness: 0.62, metalness: 0.04,
     side: THREE.DoubleSide,
-    emissive: isSeeker ? 0x2e0404 : 0x000000
+    emissive: isSeeker ? 0x0d5bd6 : 0x000000,
+    emissiveIntensity: isSeeker ? 0.65 : 0
   });
   const sleeveMat = new THREE.MeshStandardMaterial({
-    map: isSeeker ? sansSleeveTexRed : sansSleeveTexBlue,
-    roughness: 0.68, metalness: 0.03,
-    emissive: isSeeker ? 0x2e0404 : 0x000000
+    map: sansSleeveTexBlue,
+    roughness: 0.62, metalness: 0.04,
+    emissive: isSeeker ? 0x0d5bd6 : 0x000000,
+    emissiveIntensity: isSeeker ? 0.65 : 0
   });
   const ribbedMat = new THREE.MeshStandardMaterial({
-    map: isSeeker ? sansRibbedTexRed : sansRibbedTexBlue,
-    roughness: 0.74
+    map: sansRibbedTexBlue,
+    roughness: 0.70,
+    emissive: isSeeker ? 0x093c91 : 0x000000,
+    emissiveIntensity: isSeeker ? 0.55 : 0
   });
   const hoodGreyMat = new THREE.MeshStandardMaterial({ map: sansHoodGreyTex, roughness: 0.76 });
   const hoodInnerDarkMat = new THREE.MeshStandardMaterial({ color: 0x454c59, roughness: 0.9 });
@@ -1082,8 +1086,8 @@ function buildSansCharacterMesh(isSeeker = false, includeXray = false) {
   let seekerAuraRing = null;
   if (isSeeker) {
     seekerAuraRing = new THREE.Mesh(
-      new THREE.RingGeometry(0.55, 0.95, 24),
-      new THREE.MeshBasicMaterial({ color: 0xff2222, transparent: true, opacity: 0.65, side: THREE.DoubleSide, depthWrite: false })
+      new THREE.RingGeometry(0.55, 0.98, 28),
+      new THREE.MeshBasicMaterial({ color: 0x22b8ff, transparent: true, opacity: 0.78, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending })
     );
     seekerAuraRing.rotation.x = -Math.PI / 2; seekerAuraRing.position.y = 0.05;
     root.add(seekerAuraRing);
@@ -1106,6 +1110,12 @@ function buildSansCharacterMesh(isSeeker = false, includeXray = false) {
     bodyGroup.add(xrayGroup);
   }
 
+  let stunEffectGroup = null;
+  if (!isSeeker) {
+    stunEffectGroup = createStunEffectGroup();
+    root.add(stunEffectGroup);
+  }
+
   root.userData = {
     bodyGroup,
     leftLeg,
@@ -1114,7 +1124,8 @@ function buildSansCharacterMesh(isSeeker = false, includeXray = false) {
     handItem,
     spinWheel: null,
     seekerAuraRing,
-    sansEyeGlow
+    sansEyeGlow,
+    stunEffectGroup
   };
   return root;
 }
@@ -1169,9 +1180,15 @@ function buildCharacterMesh(skinHex, hatId, isSeeker, includeXray = false, isSan
     body.grp.add(xrayGroup);
   }
 
+  let stunEffectGroup = null;
+  if (!isSeeker) {
+    stunEffectGroup = createStunEffectGroup();
+    root.add(stunEffectGroup);
+  }
+
   root.userData = {
     bodyGroup: body.grp, leftLeg: body.leftLeg, rightLeg: body.rightLeg,
-    xrayGroup, handItem, spinWheel, seekerAuraRing
+    xrayGroup, handItem, spinWheel, seekerAuraRing, stunEffectGroup
   };
   return root;
 }
@@ -1199,4 +1216,406 @@ function disposeNameTag(sp) {
     if (sp.material.map) sp.material.map.dispose();
     sp.material.dispose();
   }
+}
+
+
+// =========================================================================
+// MÔ HÌNH 3D GASTER BLASTER (ĐẦU XƯƠNG RỒNG PHÓNG TIA TRẮNG XANH CỦA SANS)
+// =========================================================================
+function createGasterBlasterBoneTexture() {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 256;
+  const g = c.getContext('2d');
+  const grad = g.createLinearGradient(0, 0, 0, 256);
+  grad.addColorStop(0.0, '#f8fafc');
+  grad.addColorStop(0.5, '#e2e8f0');
+  grad.addColorStop(1.0, '#b8c4d9');
+  g.fillStyle = grad; g.fillRect(0, 0, 256, 256);
+
+  // Vân xương tinh tế & bóng đổ lạnh xanh nhạt
+  for (let i = 0; i < 1200; i++) {
+    g.fillStyle = Math.random() > 0.5 ? 'rgba(255,255,255,0.12)' : 'rgba(56, 84, 128, 0.08)';
+    g.fillRect(Math.random() * 256, Math.random() * 256, 2, 4);
+  }
+  return new THREE.CanvasTexture(c);
+}
+const gasterBoneTex = createGasterBlasterBoneTexture();
+
+// Khối sọ trên Gaster Blaster điêu khắc sắc sảo (đỉnh nhọn vương miện, má loe góc cạnh, mõm rồng)
+function createGasterCraniumGeometry() {
+  const segX = 36, segY = 24;
+  const positions = [], uvs = [], indices = [];
+
+  for (let j = 0; j <= segY; j++) {
+    const v = j / segY;
+    const phi = (v - 0.5) * Math.PI;
+    const cphi = Math.cos(phi), sphi = Math.sin(phi);
+
+    for (let i = 0; i <= segX; i++) {
+      const u = i / segX;
+      const ang = (u - 0.5) * Math.PI * 2;
+      const ux = -Math.sin(ang) * cphi;
+      const uy = sphi;
+      const uz = -Math.cos(ang) * cphi;
+
+      // Dáng sọ rồng dài về trước (-Z), rộng gò má, thon đỉnh
+      let x = ux * 0.44;
+      let y = uy * 0.34;
+      let z = uz * 0.56;
+
+      // Đỉnh đầu nhọn hình mũi giáo đặc trưng (như ảnh mẫu)
+      if (uy > 0.15) {
+        const crest = Math.exp(-Math.pow(ux / 0.38, 2)) * (uy - 0.15);
+        y += crest * 0.24;
+        z += crest * 0.14;
+      }
+
+      // Kéo dài mõm về phía trước (-Z) và hơi thu gọn đầu mõm
+      if (uz < 0) {
+        const snoutF = Math.min(1, -uz);
+        z -= snoutF * 0.22;
+        x *= (1 - snoutF * 0.18);
+      }
+
+      // Phồng gờ gò má góc cạnh ở 2 bên mặt
+      const cheek = Math.exp(-Math.pow((Math.abs(ux) - 0.72) / 0.28, 2)) * Math.exp(-Math.pow((uy + 0.18) / 0.32, 2));
+      x += Math.sign(ux) * 0.11 * cheek;
+
+      // Nén đáy sọ thành vòm miệng phẳng để khớp với răng hàm trên
+      if (uy < -0.35) {
+        y = -0.35 * 0.34 + (uy + 0.35) * 0.08;
+      }
+
+      // Lõm 2 hốc mắt sắc cạnh
+      [-1, 1].forEach(side => {
+        const da = (ang - side * 0.52) / 0.28;
+        const dp = (phi - 0.02) / 0.28;
+        const d2 = da * da + dp * dp;
+        if (d2 < 2.2) {
+          const ind = Math.exp(-d2 * 1.6);
+          z += 0.08 * ind;
+          x -= side * 0.03 * ind;
+        }
+      });
+
+      positions.push(x, y + 0.14, z);
+      uvs.push(u, v);
+    }
+  }
+
+  for (let j = 0; j < segY; j++) {
+    for (let i = 0; i < segX; i++) {
+      const a = j * (segX + 1) + i;
+      const b = a + 1;
+      const c = a + (segX + 1);
+      const d = c + 1;
+      indices.push(a, b, d, a, d, c);
+    }
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geo.setIndex(indices);
+  geo.computeVertexNormals();
+  return geo;
+}
+
+const gasterCraniumGeo = createGasterCraniumGeometry();
+
+// Cặp sừng xương cong vút ra sau hai bên đỉnh đầu Gaster Blaster
+const gasterLeftHornGeo = createVariableTubeGeometry(
+  [
+    new THREE.Vector3(-0.34, 0.28, 0.04),
+    new THREE.Vector3(-0.48, 0.42, 0.20),
+    new THREE.Vector3(-0.46, 0.56, 0.46),
+    new THREE.Vector3(-0.34, 0.64, 0.72)
+  ],
+  [0.105, 0.088, 0.056, 0.012],
+  18, 12, new THREE.Vector3(-1, 0.4, 0)
+);
+const gasterRightHornGeo = createVariableTubeGeometry(
+  [
+    new THREE.Vector3(0.34, 0.28, 0.04),
+    new THREE.Vector3(0.48, 0.42, 0.20),
+    new THREE.Vector3(0.46, 0.56, 0.46),
+    new THREE.Vector3(0.34, 0.64, 0.72)
+  ],
+  [0.105, 0.088, 0.056, 0.012],
+  18, 12, new THREE.Vector3(1, 0.4, 0)
+);
+
+// Cặp xương quai hàm dưới góc cạnh có gai khuỷu đặc trưng (như ảnh mẫu)
+const gasterLeftJawArmGeo = createVariableTubeGeometry(
+  [
+    new THREE.Vector3(-0.36, 0.02, 0.04),
+    new THREE.Vector3(-0.38, -0.14, -0.06),
+    new THREE.Vector3(-0.28, -0.18, -0.34),
+    new THREE.Vector3(-0.14, -0.14, -0.60),
+    new THREE.Vector3(0.0, -0.12, -0.72)
+  ],
+  [0.068, 0.064, 0.058, 0.052, 0.045],
+  18, 10, new THREE.Vector3(-1, 0, 0)
+);
+const gasterRightJawArmGeo = createVariableTubeGeometry(
+  [
+    new THREE.Vector3(0.36, 0.02, 0.04),
+    new THREE.Vector3(0.38, -0.14, -0.06),
+    new THREE.Vector3(0.28, -0.18, -0.34),
+    new THREE.Vector3(0.14, -0.14, -0.60),
+    new THREE.Vector3(0.0, -0.12, -0.72)
+  ],
+  [0.068, 0.064, 0.058, 0.052, 0.045],
+  18, 10, new THREE.Vector3(1, 0, 0)
+);
+
+function createGasterBlasterMesh(beamWorldLength) {
+  const root = new THREE.Group();
+  const skullGroup = new THREE.Group();
+  root.add(skullGroup);
+
+  const boneMat = new THREE.MeshStandardMaterial({
+    map: gasterBoneTex, color: 0xf4f7fc, roughness: 0.36, metalness: 0.14,
+    emissive: 0x0b1f33, emissiveIntensity: 0.25
+  });
+  const darkVoidMat = new THREE.MeshBasicMaterial({ color: 0x04060b });
+  const cyanEyeMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+  const whiteCoreMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const toothMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.25, metalness: 0.08 });
+
+  // 1. SỌ TRÊN + SỪNG XƯƠNG VUỐT NGƯỢC + RÃNH NỨT ĐEN GIỮA TRÁN
+  skullGroup.add(new THREE.Mesh(gasterCraniumGeo, boneMat));
+  skullGroup.add(new THREE.Mesh(gasterLeftHornGeo, boneMat));
+  skullGroup.add(new THREE.Mesh(gasterRightHornGeo, boneMat));
+
+  // Vết nứt đen dọc chính giữa trán ôm sát bề mặt sọ chạy thẳng xuống hốc mũi
+  const crestCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0, 0.655, -0.155),
+    new THREE.Vector3(0, 0.556, -0.422),
+    new THREE.Vector3(0, 0.402, -0.638),
+    new THREE.Vector3(0, 0.212, -0.778),
+    new THREE.Vector3(0, 0.125, -0.788)
+  ]);
+  const fissureMesh = new THREE.Mesh(new THREE.TubeGeometry(crestCurve, 20, 0.024, 8, false), darkVoidMat);
+  skullGroup.add(fissureMesh);
+
+  // Hốc mũi giọt nước đen sâu ở chính giữa đầu mõm
+  const noseHole = new THREE.Mesh(new THREE.SphereGeometry(0.082, 14, 12), darkVoidMat);
+  noseHole.scale.set(0.84, 1.28, 0.58);
+  noseHole.position.set(0, 0.12, -0.772);
+  skullGroup.add(noseHole);
+
+  // Vòm miệng trong tối sâu
+  const palate = new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 12), darkVoidMat);
+  palate.scale.set(1.05, 0.40, 1.35);
+  palate.position.set(0, 0.02, -0.22);
+  skullGroup.add(palate);
+
+  // 2 HỐC MẮT SẮC LẠNH + ĐỒNG TỬ XANH PHÁT SÁNG NẰM ĐÚNG HỐC LÕM SỌ
+  [-1, 1].forEach(side => {
+    const eyeGrp = new THREE.Group();
+    eyeGrp.position.set(side * 0.246, 0.162, -0.592);
+    eyeGrp.rotation.y = side * -0.50;
+    eyeGrp.rotation.z = side * -0.22;
+
+    const socket = new THREE.Mesh(new THREE.SphereGeometry(0.128, 16, 14), darkVoidMat);
+    socket.scale.set(1.22, 0.85, 0.42);
+    eyeGrp.add(socket);
+
+    const iris = new THREE.Mesh(new THREE.RingGeometry(0.042, 0.080, 18), cyanEyeMat);
+    iris.position.set(side * -0.01, 0, -0.059);
+    iris.rotation.y = Math.PI;
+    eyeGrp.add(iris);
+
+    const pupil = new THREE.Mesh(new THREE.CircleGeometry(0.044, 14), whiteCoreMat);
+    pupil.position.set(side * -0.01, 0, -0.063);
+    pupil.rotation.y = Math.PI;
+    eyeGrp.add(pupil);
+
+    const eyeHalo = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: sansCyanGlowTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false
+    }));
+    eyeHalo.position.set(side * -0.01, 0, -0.082);
+    eyeHalo.scale.set(0.36, 0.36, 1);
+    eyeGrp.add(eyeHalo);
+
+    skullGroup.add(eyeGrp);
+
+    // Gờ xương má sắc nhọn 2 bên
+    const cheekSpike = new THREE.Mesh(new THREE.ConeGeometry(0.085, 0.36, 6), boneMat);
+    cheekSpike.position.set(side * 0.46, 0.06, -0.02);
+    cheekSpike.rotation.z = side * -0.82;
+    cheekSpike.rotation.x = 0.42;
+    skullGroup.add(cheekSpike);
+  });
+
+  // HÀNG RĂNG NANH HÀM TRÊN SẮC NHỌN BÁM KHÍT VIỀN HÀM
+  const upperFangsSpec = [
+    [-0.34, 0.02, -0.40, 0.16], [ 0.34, 0.02, -0.40, 0.16],
+    [-0.24, 0.02, -0.58, 0.23], [ 0.24, 0.02, -0.58, 0.23],
+    [-0.11, 0.02, -0.69, 0.17], [ 0.11, 0.02, -0.69, 0.17],
+    [ 0.00, 0.02, -0.73, 0.12]
+  ];
+  upperFangsSpec.forEach(([fx, fy, fz, flen]) => {
+    const fang = new THREE.Mesh(new THREE.ConeGeometry(0.038, flen, 7), toothMat);
+    fang.rotation.x = Math.PI;
+    fang.position.set(fx, fy - flen * 0.35, fz);
+    skullGroup.add(fang);
+  });
+
+  // 2. HÀM DƯỚI CÓ KHỚP BẢN LỀ (MỞ RỘNG KHI TỤ LỰC & BẮN TIA)
+  const jawGroup = new THREE.Group();
+  jawGroup.position.set(0, -0.06, 0.06);
+  skullGroup.add(jawGroup);
+
+  jawGroup.add(new THREE.Mesh(gasterLeftJawArmGeo, boneMat));
+  jawGroup.add(new THREE.Mesh(gasterRightJawArmGeo, boneMat));
+
+  // Cằm nhọn & gai khuỷu xương quai hàm
+  const chinTip = new THREE.Mesh(new THREE.ConeGeometry(0.095, 0.22, 6), boneMat);
+  chinTip.rotation.x = -Math.PI * 0.44;
+  chinTip.position.set(0, -0.14, -0.72);
+  jawGroup.add(chinTip);
+
+  [-1, 1].forEach(side => {
+    const jawBarb = new THREE.Mesh(new THREE.ConeGeometry(0.048, 0.22, 6), boneMat);
+    jawBarb.position.set(side * 0.42, -0.14, -0.06);
+    jawBarb.rotation.z = side * -1.1;
+    jawBarb.rotation.x = 0.5;
+    jawGroup.add(jawBarb);
+  });
+
+  // Răng nanh hàm dưới chỉa lên
+  [
+    [-0.22, -0.12, -0.44, 0.14], [ 0.22, -0.12, -0.44, 0.14],
+    [-0.12, -0.10, -0.60, 0.16], [ 0.12, -0.10, -0.60, 0.16],
+    [ 0.00, -0.09, -0.67, 0.12]
+  ].forEach(([fx, fy, fz, flen]) => {
+    const fang = new THREE.Mesh(new THREE.ConeGeometry(0.032, flen, 7), toothMat);
+    fang.position.set(fx, fy + flen * 0.42, fz);
+    jawGroup.add(fang);
+  });
+
+  // 3. QUẢ CẦU NĂNG LƯỢNG TRẮNG-XANH TỤ TRONG MIỆNG
+  const chargeGroup = new THREE.Group();
+  chargeGroup.position.set(0, -0.14, -0.42);
+  skullGroup.add(chargeGroup);
+
+  const orbCore = new THREE.Mesh(new THREE.SphereGeometry(0.20, 18, 14), whiteCoreMat);
+  const orbOuter = new THREE.Mesh(
+    new THREE.SphereGeometry(0.30, 18, 14),
+    new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.65, blending: THREE.AdditiveBlending, depthWrite: false })
+  );
+  const orbRing1 = new THREE.Mesh(
+    new THREE.TorusGeometry(0.36, 0.022, 8, 24),
+    new THREE.MeshBasicMaterial({ color: 0x7dd3fc, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false })
+  );
+  const orbRing2 = new THREE.Mesh(
+    new THREE.TorusGeometry(0.42, 0.018, 8, 24),
+    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.72, blending: THREE.AdditiveBlending, depthWrite: false })
+  );
+  orbRing2.rotation.y = Math.PI / 2;
+  const orbHalo = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: sansCyanGlowTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false
+  }));
+  orbHalo.scale.set(1.45, 1.45, 1);
+  chargeGroup.add(orbCore, orbOuter, orbRing1, orbRing2, orbHalo);
+
+  // 4. TIA LASER TRẮNG XANH KHỔNG LỒ BẮN THẲNG VỀ PHÍA TRƯỚC (-Z)
+  const L = Math.max(1.5, beamWorldLength);
+  const beamGroup = new THREE.Group();
+  beamGroup.position.set(0, -0.14, -0.48);
+  beamGroup.visible = false;
+  root.add(beamGroup);
+
+  const makeBeamCyl = (r, color, opacity, pierce = false) => {
+    const geo = new THREE.CylinderGeometry(r, r * 1.04, L, 20, 1, true);
+    geo.translate(0, L / 2, 0);
+    geo.rotateX(-Math.PI / 2);
+    const mat = new THREE.MeshBasicMaterial({
+      color, transparent: true, opacity, fog: false,
+      side: THREE.DoubleSide, depthTest: !pierce, depthWrite: false, blending: THREE.AdditiveBlending
+    });
+    const m = new THREE.Mesh(geo, mat);
+    if (pierce) m.renderOrder = 992;
+    return m;
+  };
+
+  const beamCore = makeBeamCyl(0.32, 0xffffff, 0.98, false);
+  const beamMid = makeBeamCyl(0.58, 0x38bdf8, 0.74, false);
+  const beamAura = makeBeamCyl(0.92, 0x0284c7, 0.36, false);
+  // Tia hào quang xuyên tường giúp thấy rõ đường đạn cắt qua mê cung
+  const beamPierceGlow = makeBeamCyl(0.46, 0x38bdf8, 0.24, true);
+  beamGroup.add(beamCore, beamMid, beamAura, beamPierceGlow);
+
+  // Cầu lóe sáng ở miệng súng
+  const muzzleBurst = new THREE.Mesh(
+    new THREE.SphereGeometry(0.65, 16, 12),
+    new THREE.MeshBasicMaterial({ color: 0xe0f2fe, transparent: true, opacity: 0.88, fog: false, blending: THREE.AdditiveBlending, depthWrite: false })
+  );
+  beamGroup.add(muzzleBurst);
+
+  // Các vòng sóng xung kích chạy dọc toàn bộ tia laser tầm xa
+  const beamRings = [];
+  const ringCount = Math.max(4, Math.min(14, Math.floor(L / 4.8)));
+  for (let i = 0; i < ringCount; i++) {
+    const rMesh = new THREE.Mesh(
+      new THREE.TorusGeometry(0.76, 0.044, 8, 22),
+      new THREE.MeshBasicMaterial({ color: 0xbae6fd, transparent: true, opacity: 0.84, fog: false, blending: THREE.AdditiveBlending, depthWrite: false })
+    );
+    rMesh.position.z = -(i / ringCount) * L;
+    beamGroup.add(rMesh);
+    beamRings.push(rMesh);
+  }
+
+  // Nguồn sáng xanh dương-trắng soi sáng cả hành lang Backrooms khi phóng tia
+  const light = new THREE.PointLight(0x38bdf8, 2.8, 32);
+  light.position.set(0, 0, -1.2);
+  root.add(light);
+
+  root.userData = {
+    skullGroup, jawGroup, chargeGroup, orbRing1, orbRing2,
+    beamGroup, beamCore, beamMid, beamAura, beamPierceGlow, muzzleBurst, beamRings,
+    beamLength: L, light
+  };
+  return root;
+}
+
+// Tạo vòng điện xanh quanh nhân vật Người Chạy khi bị choáng 5s
+function createStunEffectGroup() {
+  const grp = new THREE.Group();
+  const rMat1 = new THREE.MeshBasicMaterial({
+    color: 0x38bdf8, transparent: true, opacity: 0.88, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending
+  });
+  const rMat2 = new THREE.MeshBasicMaterial({
+    color: 0xe0f2fe, transparent: true, opacity: 0.82, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending
+  });
+  const ring1 = new THREE.Mesh(new THREE.TorusGeometry(0.56, 0.026, 8, 28), rMat1);
+  ring1.rotation.x = Math.PI / 2 + 0.25;
+  ring1.position.y = 0.95;
+  const ring2 = new THREE.Mesh(new THREE.TorusGeometry(0.54, 0.022, 8, 28), rMat2);
+  ring2.rotation.x = Math.PI / 2 - 0.28;
+  ring2.position.y = 1.25;
+  const ring3 = new THREE.Mesh(new THREE.RingGeometry(0.42, 0.62, 24), rMat1);
+  ring3.rotation.x = -Math.PI / 2;
+  ring3.position.y = 0.06;
+  grp.add(ring1, ring2, ring3);
+  grp.visible = false;
+  grp.userData = { ring1, ring2 };
+  return grp;
+}
+
+function disposeObject3D(obj) {
+  if (!obj) return;
+  obj.traverse(child => {
+    if (child.geometry && child.geometry !== gasterCraniumGeo && child.geometry !== gasterLeftHornGeo && child.geometry !== gasterRightHornGeo && child.geometry !== gasterLeftJawArmGeo && child.geometry !== gasterRightJawArmGeo) {
+      child.geometry.dispose();
+    }
+    if (child.material) {
+      const mats = Array.isArray(child.material) ? child.material : [child.material];
+      mats.forEach(m => {
+        if (m.map && m.map !== gasterBoneTex && m.map !== sansCyanGlowTex) m.map.dispose();
+        m.dispose();
+      });
+    }
+  });
 }

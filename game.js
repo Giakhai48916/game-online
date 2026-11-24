@@ -60,6 +60,108 @@ function playUndertaleSansVoice() {
   } catch (e) {}
 }
 
+// Âm thanh Gaster Blaster chuẩn (gaster-blaster-sound-effect.mp3) hỗ trợ tải trước & phát mượt trên PC / Mobile / iPad
+let sharedAudioCtx = null;
+let gasterBlasterAudioBuf = null;
+let gasterBlasterRawBytes = null;
+let gasterBlasterFetchStarted = false;
+let gasterBlasterDecoding = false;
+
+function getSharedAudioCtx() {
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtx) return null;
+  if (!sharedAudioCtx) sharedAudioCtx = new AudioCtx();
+  if (sharedAudioCtx.state === 'suspended') sharedAudioCtx.resume().catch(() => {});
+  return sharedAudioCtx;
+}
+
+function decodeGasterBlasterIfReady() {
+  if (gasterBlasterAudioBuf || gasterBlasterDecoding || !gasterBlasterRawBytes) return;
+  const ctx = getSharedAudioCtx();
+  if (!ctx) return;
+  gasterBlasterDecoding = true;
+  const copy = gasterBlasterRawBytes.slice(0);
+  new Promise((resolve, reject) => {
+    const p = ctx.decodeAudioData(copy, resolve, reject);
+    if (p && typeof p.then === 'function') p.then(resolve).catch(reject);
+  })
+    .then(buf => { if (buf) gasterBlasterAudioBuf = buf; })
+    .catch(() => {})
+    .finally(() => { gasterBlasterDecoding = false; });
+}
+
+function preloadGasterBlasterAudio() {
+  if (gasterBlasterAudioBuf) return;
+  if (gasterBlasterRawBytes) { decodeGasterBlasterIfReady(); return; }
+  if (gasterBlasterFetchStarted) return;
+  gasterBlasterFetchStarted = true;
+  fetch('./gaster-blaster-sound-effect.mp3')
+    .then(res => {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.arrayBuffer();
+    })
+    .then(arr => {
+      gasterBlasterRawBytes = arr;
+      decodeGasterBlasterIfReady();
+    })
+    .catch(() => { gasterBlasterFetchStarted = false; });
+}
+
+function unlockGameAudio() {
+  const ctx = getSharedAudioCtx();
+  if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+  preloadGasterBlasterAudio();
+}
+['pointerdown', 'touchstart', 'keydown'].forEach(ev => {
+  window.addEventListener(ev, unlockGameAudio, { passive: true });
+});
+preloadGasterBlasterAudio();
+
+function playGasterBlasterSound(volume = 0.95) {
+  const vol = Math.max(0.22, Math.min(1.0, volume));
+  try {
+    const ctx = getSharedAudioCtx();
+    if (ctx && gasterBlasterAudioBuf) {
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+      const src = ctx.createBufferSource();
+      const gain = ctx.createGain();
+      src.buffer = gasterBlasterAudioBuf;
+      gain.gain.setValueAtTime(vol, ctx.currentTime);
+      src.connect(gain);
+      gain.connect(ctx.destination);
+      src.start(0);
+      return;
+    }
+  } catch (e) {}
+
+  try {
+    const audio = new Audio('./gaster-blaster-sound-effect.mp3');
+    audio.volume = vol;
+    audio.currentTime = 0;
+    const p = audio.play();
+    if (p && typeof p.catch === 'function') p.catch(() => {});
+  } catch (e) {}
+}
+
+function playStunHitSound() {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(720, now);
+    osc.frequency.exponentialRampToValueAtTime(140, now + 0.28);
+    gain.gain.setValueAtTime(0.09, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.30);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(now); osc.stop(now + 0.32);
+    setTimeout(() => ctx.close().catch(() => {}), 450);
+  } catch (e) {}
+}
+
 function createPreviewBox(canvasId, w, h) {
   const cvs = document.getElementById(canvasId);
   const ren = new THREE.WebGLRenderer({ canvas: cvs, alpha: true, antialias: true, powerPreference: 'high-performance' });
@@ -433,6 +535,27 @@ function hasLineOfSight(x1, y1, x2, y2) {
   return true;
 }
 
+function castRayToWall(x, y, yaw, maxDist) {
+  const fx = -Math.sin(yaw), fy = -Math.cos(yaw);
+  const step = 8;
+  for (let d = step; d <= maxDist; d += step) {
+    const px = x + fx * d, py = y + fy * d;
+    const r = Math.floor(py / TILE_SIZE), c = Math.floor(px / TILE_SIZE);
+    if (r < 0 || r >= activeMapGrid.length || c < 0 || c >= activeMapGrid.length) return Math.max(0, d - step);
+    if (activeMapGrid[r][c] === 1) return Math.max(0, d - step);
+  }
+  return maxDist;
+}
+
+function distPointToBeam(px, py, sx, sy, yaw, beamDist) {
+  const fx = -Math.sin(yaw), fy = -Math.cos(yaw);
+  const dx = px - sx, dy = py - sy;
+  const proj = dx * fx + dy * fy;
+  if (proj < -16 || proj > beamDist + 14) return Infinity;
+  const clamped = Math.max(0, Math.min(beamDist, proj));
+  return Math.hypot(px - (sx + fx * clamped), py - (sy + fy * clamped));
+}
+
 function isInRescueZone(x, y) {
   const min = (CENTER_TILE - 3.3) * TILE_SIZE, max = (CENTER_TILE + 4.3) * TILE_SIZE;
   return x >= min && x <= max && y >= min && y <= max;
@@ -453,7 +576,7 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x1b1809);
 scene.fog = new THREE.FogExp2(0x1b1809, 0.042);
 
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 70);
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 115);
 camera.rotation.order = 'YXZ';
 scene.add(camera);
 
@@ -584,7 +707,7 @@ function rebuildBackroomsWorld3D(grid) {
   rebuildMinimapBase(grid);
 }
 
-const groundItemMeshes = {}, activeFlashBeams = [], playerMeshes = {};
+const groundItemMeshes = {}, activeFlashBeams = [], activeBlasters3D = [], playerMeshes = {};
 
 function createGroundItemMesh() {
   const grp = new THREE.Group();
@@ -608,6 +731,37 @@ function spawnFlashBeamEffect(x, y, yaw) {
   activeFlashBeams.push({ mesh: cone, light, life: 0.72, maxLife: 0.72 });
 }
 
+function spawnGasterBlaster3D(x, y, yaw, beamDist, chargeSec, beamSec) {
+  const beamWorldLen = Math.max(1.5, beamDist * WORLD_SCALE);
+  const mesh = createGasterBlasterMesh(beamWorldLen);
+  mesh.position.set(x * WORLD_SCALE, 1.92, y * WORLD_SCALE);
+  mesh.rotation.y = yaw;
+  mesh.scale.set(0.15, 0.15, 0.15);
+  scene.add(mesh);
+
+  // Tính âm lượng theo khoảng cách tới đầu xương / đường tia laser (gần nghe cực đã, xa nhỏ dần)
+  let vol = 0.96;
+  if (localPlayer.initialized) {
+    const dSkull = Math.hypot(localPlayer.x - x, localPlayer.y - y);
+    const dLine = distPointToBeam(localPlayer.x, localPlayer.y, x, y, yaw, beamDist);
+    const nearest = Math.min(dSkull, dLine);
+    vol = Math.max(0.32, Math.min(1.0, 1.0 - (nearest / 1450) * 0.68));
+  }
+  playGasterBlasterSound(vol);
+
+  activeBlasters3D.push({
+    mesh,
+    baseX: x * WORLD_SCALE,
+    baseY: 1.92,
+    baseZ: y * WORLD_SCALE,
+    yaw,
+    elapsed: 0,
+    chargeSec: chargeSec || BLASTER_CHARGE_SEC,
+    beamSec: beamSec || BLASTER_BEAM_SEC,
+    beamShown: false
+  });
+}
+
 function syncPlayerMesh3D(p) {
   const existing = playerMeshes[p.id];
   const isSansMode = !!p.sansActive;
@@ -621,13 +775,15 @@ function syncPlayerMesh3D(p) {
   const entry = playerMeshes[p.id];
   const lockSec = p.status === 'jailed' ? Math.ceil(p.lockTimer || 0) : 0;
   const blindSec = p.blindTimer > 0 ? Math.ceil(p.blindTimer) : 0;
-  const tagKey = `${p.status}|${lockSec}|${blindSec}|${p.grace ? 1 : 0}`;
+  const stunSec = p.stunTimer > 0 ? Math.ceil(p.stunTimer) : 0;
+  const tagKey = `${p.status}|${lockSec}|${blindSec}|${stunSec}|${p.grace ? 1 : 0}`;
   if (entry.tagKey !== tagKey) {
     entry.tagKey = tagKey;
     if (entry.nameTag) { entry.mesh.remove(entry.nameTag); disposeNameTag(entry.nameTag); }
     let label = p.name, color = '#ffffff';
-    if (p.role === 'seeker') { label = blindSec > 0 ? `[⚡ CHÓI ${blindSec}s] ${p.name}` : `[BẮT] ${p.name}`; color = blindSec > 0 ? '#fde047' : '#ff6b6b'; }
+    if (p.role === 'seeker') { label = blindSec > 0 ? `[⚡ CHÓI ${blindSec}s] ${p.name}` : `[BẮT] ${p.name}`; color = blindSec > 0 ? '#fde047' : (p.sansActive ? '#38bdf8' : '#ff6b6b'); }
     else if (p.status === 'jailed') { label = lockSec > 0 ? `[KHÓA ${lockSec}s] ${p.name}` : `[CỨU ĐƯỢC!] ${p.name}`; color = lockSec > 0 ? '#ff9f1c' : '#4ade80'; }
+    else if (stunSec > 0) { label = `[⚡ CHOÁNG ${stunSec}s] ${p.name}`; color = '#38bdf8'; }
     else if (p.grace) { label = `[MIỄN NHIỄM] ${p.name}`; color = '#38bdf8'; }
     entry.nameTag = createNameTagSprite(label, color); entry.nameTag.visible = false; entry.mesh.add(entry.nameTag);
   }
@@ -670,6 +826,9 @@ const hudItemBadge = document.getElementById('hud-item-badge');
 const hudXrayBadge = document.getElementById('hud-xray-badge');
 const blindOverlay = document.getElementById('blind-overlay');
 const blindCountdown = document.getElementById('blind-countdown');
+const hudBlasterBadge = document.getElementById('hud-blaster-badge');
+const stunOverlay = document.getElementById('stun-overlay');
+const stunCountdown = document.getElementById('stun-countdown');
 const caughtVignette = document.getElementById('caught-vignette');
 const xrayVignette = document.getElementById('xray-vignette');
 const pcLockHint = document.getElementById('pc-lock-hint');
@@ -677,9 +836,11 @@ const mobileSwipeTip = document.getElementById('mobile-swipe-tip');
 const toastContainer = document.getElementById('toast-container');
 const rescuePrompt = document.getElementById('rescue-prompt');
 const flashPrompt = document.getElementById('flash-prompt');
+const blasterPrompt = document.getElementById('blaster-prompt');
 const mobileControls = document.getElementById('mobile-controls');
 const btnMobileRescue = document.getElementById('btn-mobile-rescue');
 const btnMobileFlash = document.getElementById('btn-mobile-flash');
+const btnMobileBlaster = document.getElementById('btn-mobile-blaster');
 const endOverlay = document.getElementById('end-overlay');
 const endPersonalTitle = document.getElementById('end-personal-title');
 const endPersonalSub = document.getElementById('end-personal-sub');
@@ -726,7 +887,7 @@ function createPlayerObj(id, name, cosmetics, isBot = false) {
     wantsSans, sansActive: false, isBot,
     x: (CENTER_TILE + 0.5) * TILE_SIZE, y: (CENTER_TILE + 0.5) * TILE_SIZE,
     yaw: 0, tpSeq: 0, role: 'hider', status: 'alive',
-    lockTimer: 0, graceTimer: 0, blindTimer: 0, hasItem: false,
+    lockTimer: 0, graceTimer: 0, blindTimer: 0, stunTimer: 0, blasterCooldown: 0, hasItem: false,
     input: { dx: 0, dy: 0 }, moving: false, botDir: { dx: 0, dy: 0 }, botThink: 0
   };
 }
@@ -834,6 +995,7 @@ function hostAcceptGuestPos(playerId, msg) {
   const p = hostRoom.players[playerId];
   if (!p || p.isBot || msg.tpSeq !== p.tpSeq) return;
   if (typeof msg.yaw === 'number' && !Number.isNaN(msg.yaw)) p.yaw = msg.yaw;
+  if (p.stunTimer > 0) { p.moving = false; return; }
   if (typeof msg.moving === 'boolean') p.moving = msg.moving;
   if (typeof msg.x === 'number' && typeof msg.y === 'number') {
     const physPhase = p.status === 'eliminated' ? 'playing' : hostRoom.phase;
@@ -883,7 +1045,42 @@ function hostHandleUseFlashlight(playerId, msg) {
   hostMaintainFlashlights();
 }
 
+function hostHandleBlaster(playerId, msg) {
+  if (!hostRoom || hostRoom.phase !== 'playing') return;
+  if (msg) hostAcceptGuestPos(playerId, msg);
+  const p = hostRoom.players[playerId];
+  if (!p || p.role !== 'seeker' || !p.sansActive || p.blasterCooldown > 0) return;
+
+  p.blasterCooldown = BLASTER_COOLDOWN;
+  const nearWall = castRayToWall(p.x, p.y, p.yaw, 46);
+  const fx = -Math.sin(p.yaw), fy = -Math.cos(p.yaw);
+  const spawnOffset = Math.min(32, Math.max(6, nearWall - 12));
+  const bx = p.x + fx * spawnOffset;
+  const by = p.y + fy * spawnOffset;
+  const beamDist = BLASTER_RANGE;
+
+  if (!hostRoom.activeBlasters) hostRoom.activeBlasters = [];
+  hostRoom.activeBlasters.push({
+    x: bx, y: by, yaw: p.yaw, beamDist,
+    elapsed: 0,
+    chargeSec: BLASTER_CHARGE_SEC,
+    beamSec: BLASTER_BEAM_SEC,
+    hitIds: new Set()
+  });
+
+  hostBroadcast({
+    type: 'blasterEffect',
+    x: Math.round(bx * 10) / 10,
+    y: Math.round(by * 10) / 10,
+    yaw: Number(p.yaw.toFixed(3)),
+    beamDist: Math.round(beamDist),
+    chargeSec: BLASTER_CHARGE_SEC,
+    beamSec: BLASTER_BEAM_SEC
+  });
+}
+
 function updateBotAI(bot, players, seeker, dt, xrayOn) {
+  if (bot.stunTimer > 0) { bot.input = { dx: 0, dy: 0 }; return; }
   bot.botThink -= dt;
   if (bot.role === 'seeker') {
     if (hostRoom.phase === 'prep') { bot.input = { dx: 0, dy: 0 }; return; }
@@ -967,6 +1164,8 @@ function startHostGameLoop() {
     for (const p of players) {
       if (p.graceTimer > 0) p.graceTimer = Math.max(0, p.graceTimer - DT);
       if (p.blindTimer > 0) p.blindTimer = Math.max(0, p.blindTimer - DT);
+      if (p.stunTimer > 0) p.stunTimer = Math.max(0, p.stunTimer - DT);
+      if (p.blasterCooldown > 0) p.blasterCooldown = Math.max(0, p.blasterCooldown - DT);
       if (p.status === 'jailed' && p.lockTimer > 0) {
         const prev = Math.ceil(p.lockTimer); p.lockTimer = Math.max(0, p.lockTimer - DT);
         if (prev > 0 && p.lockTimer === 0) hostBroadcast({ type: 'toast', message: `🔓 ${p.name} đã hết ${JAIL_LOCK_SECONDS}s khóa! Có thể CỨU!`, style: 'success' });
@@ -990,6 +1189,7 @@ function startHostGameLoop() {
     if (hostRoom.phase === 'playing' && seeker && seeker.blindTimer <= 0) {
       for (const h of players) {
         if (h.role === 'hider' && h.status === 'alive' && h.graceTimer <= 0 && Math.hypot(seeker.x - h.x, seeker.y - h.y) < PLAYER_RADIUS * 2.25) {
+          h.stunTimer = 0;
           if (h.hasItem) { h.hasItem = false; hostMaintainFlashlights(); }
           if (inFinalMin) {
             h.status = 'eliminated'; h.lockTimer = 0; h.tpSeq++;
@@ -1004,6 +1204,36 @@ function startHostGameLoop() {
       }
     }
 
+    // Xử lý va chạm tia Gaster Blaster của Sans (gây choáng đứng im 5s)
+    if (hostRoom.phase === 'playing' && hostRoom.activeBlasters && hostRoom.activeBlasters.length > 0) {
+      for (let bi = hostRoom.activeBlasters.length - 1; bi >= 0; bi--) {
+        const b = hostRoom.activeBlasters[bi];
+        b.elapsed += DT;
+        if (b.elapsed >= b.chargeSec && b.elapsed <= b.chargeSec + b.beamSec) {
+          for (const h of players) {
+            if (h.role === 'hider' && h.status === 'alive' && h.graceTimer <= 0 && !b.hitIds.has(h.id)) {
+              const dBeam = distPointToBeam(h.x, h.y, b.x, b.y, b.yaw, b.beamDist);
+              if (dBeam <= BLASTER_HIT_WIDTH + PLAYER_RADIUS) {
+                b.hitIds.add(h.id);
+                h.stunTimer = BLASTER_STUN_DURATION;
+                h.moving = false;
+                h.tpSeq++;
+                hostSendTo(h.id, { type: 'stunnedSound' });
+                hostBroadcast({
+                  type: 'toast',
+                  message: `⚡ ${h.name} trúng tia năng lượng và bị CHOÁNG đứng im ${BLASTER_STUN_DURATION} giây!`,
+                  style: 'danger'
+                });
+              }
+            }
+          }
+        }
+        if (b.elapsed >= b.chargeSec + b.beamSec + 0.35) {
+          hostRoom.activeBlasters.splice(bi, 1);
+        }
+      }
+    }
+
     hostBroadcast({
       type: 'gameState', phase: hostRoom.phase, timer: Math.ceil(hostRoom.timer),
       isFinalMinute: inFinalMin, xrayActive: pulseOn, xrayCountdown: pulseCountdown, items: hostRoom.items,
@@ -1011,7 +1241,10 @@ function startHostGameLoop() {
         id: p.id, name: p.name, skin: p.skin, hat: p.hat, sansActive: !!p.sansActive,
         x: Math.round(p.x * 10) / 10, y: Math.round(p.y * 10) / 10, yaw: Number(p.yaw.toFixed(2)),
         tpSeq: p.tpSeq, role: p.role, status: p.status, lockTimer: Math.ceil(p.lockTimer),
-        blindTimer: Number(p.blindTimer.toFixed(1)), hasItem: p.hasItem, grace: p.graceTimer > 0, moving: p.moving
+        blindTimer: Number(p.blindTimer.toFixed(1)),
+        stunTimer: Number(p.stunTimer.toFixed(1)),
+        blasterCd: Math.ceil(p.blasterCooldown),
+        hasItem: p.hasItem, grace: p.graceTimer > 0, moving: p.moving
       }))
     });
   }, 1000 / 30);
@@ -1022,7 +1255,7 @@ function handleClientPacket(data) {
   if (data.type === 'lobbyUpdate') {
     gamePhase = data.phase; currentRoomCode = data.code; configuredDuration = data.matchDuration || 180;
     lobbyCodeEl.textContent = data.code; durationDisplay.textContent = formatClock(configuredDuration);
-    endOverlay.classList.add('hidden'); blindOverlay.style.opacity = '0'; seekerRedLight.visible = false;
+    endOverlay.classList.add('hidden'); blindOverlay.style.opacity = '0'; stunOverlay.classList.add('hidden'); seekerRedLight.visible = false; stunOverlay.classList.add('hidden');
     showScreen(lobbyScreen);
 
     const meLobby = data.players.find(p => p.id === myId);
@@ -1059,6 +1292,9 @@ function handleClientPacket(data) {
     rebuildBackroomsWorld3D(activeMapGrid);
     for (const id in playerMeshes) { disposeNameTag(playerMeshes[id].nameTag); scene.remove(playerMeshes[id].mesh); delete playerMeshes[id]; }
     for (const id in groundItemMeshes) { scene.remove(groundItemMeshes[id]); delete groundItemMeshes[id]; }
+    for (let i = activeBlasters3D.length - 1; i >= 0; i--) { scene.remove(activeBlasters3D[i].mesh); disposeObject3D(activeBlasters3D[i].mesh); }
+    activeBlasters3D.length = 0;
+    stunOverlay.classList.add('hidden');
     for (const id in smoothPlayers) delete smoothPlayers[id];
     showScreen(gameScreen); resize3D(); detectTouchControls(); showTemporarySwipeTip();
   } else if (data.type === 'gameState') {
@@ -1072,6 +1308,8 @@ function handleClientPacket(data) {
     renderPlayers.forEach(p => { if (!smoothPlayers[p.id]) smoothPlayers[p.id] = { x: p.x, y: p.y, yaw: p.yaw }; });
     updateHUD();
   } else if (data.type === 'flashEffect') spawnFlashBeamEffect(data.x, data.y, data.yaw);
+  else if (data.type === 'blasterEffect') spawnGasterBlaster3D(data.x, data.y, data.yaw, data.beamDist, data.chargeSec, data.beamSec);
+  else if (data.type === 'stunnedSound') playStunHitSound();
   else if (data.type === 'toast') showToast(data.message, data.style || 'info');
   else if (data.type === 'gameEnded') {
     gamePhase = 'ended'; isFinalMinute = false; xrayActive = false; blindOverlay.style.opacity = '0'; seekerRedLight.visible = false;
@@ -1103,7 +1341,7 @@ btnCreate.addEventListener('click', () => {
   peer.on('open', (id) => {
     myId = id; currentRoomCode = code; setMenuLoading(false, '');
     if (!hostRoom || hostRoom.code !== code) {
-      hostRoom = { code, hostId: id, phase: 'lobby', timer: 0, matchDuration: 180, finalMinuteAlerted: false, items: [], players: { [id]: createPlayerObj(id, name, myCosmetics, false) } };
+      hostRoom = { code, hostId: id, phase: 'lobby', timer: 0, matchDuration: 180, finalMinuteAlerted: false, items: [], activeBlasters: [], players: { [id]: createPlayerObj(id, name, myCosmetics, false) } };
       startHostGameLoop();
     }
     hostEmitLobby();
@@ -1124,6 +1362,7 @@ btnCreate.addEventListener('click', () => {
       else if (msg.type === 'pos') hostAcceptGuestPos(conn.peer, msg);
       else if (msg.type === 'rescue') hostHandleRescue(conn.peer, msg);
       else if (msg.type === 'useItem') hostHandleUseFlashlight(conn.peer, msg);
+      else if (msg.type === 'blaster') hostHandleBlaster(conn.peer, msg);
     });
     conn.on('close', () => {
       const left = hostRoom.players[conn.peer], hadItem = left?.hasItem;
@@ -1184,14 +1423,14 @@ btnStartGame.addEventListener('click', () => {
   const seekerIdx = Math.floor(Math.random() * list.length), spawns = validHiderSpawns.slice().sort(() => Math.random() - 0.5);
   let sIdx = 0;
   list.forEach((p, idx) => {
-    p.input = { dx: 0, dy: 0 }; p.lockTimer = 0; p.graceTimer = 0; p.blindTimer = 0; p.hasItem = false; p.yaw = 0; p.tpSeq++;
+    p.input = { dx: 0, dy: 0 }; p.lockTimer = 0; p.graceTimer = 0; p.blindTimer = 0; p.stunTimer = 0; p.blasterCooldown = 0; p.hasItem = false; p.yaw = 0; p.tpSeq++;
     if (idx === seekerIdx) { p.role = 'seeker'; p.status = 'seeking'; p.x = (CENTER_TILE + 0.5) * TILE_SIZE; p.y = (CENTER_TILE + 0.5) * TILE_SIZE; }
     else { p.role = 'hider'; p.status = 'alive'; const sp = spawns[sIdx % spawns.length] || { r: 1, c: 1 }; sIdx++; p.x = (sp.c + 0.5) * TILE_SIZE; p.y = (sp.r + 0.5) * TILE_SIZE; }
   });
 
-  hostRoom.items = []; hostMaintainFlashlights(); hostRoom.phase = 'prep'; hostRoom.timer = PREP_DURATION; hostRoom.finalMinuteAlerted = false;
+  hostRoom.items = []; hostRoom.activeBlasters = []; hostMaintainFlashlights(); hostRoom.phase = 'prep'; hostRoom.timer = PREP_DURATION; hostRoom.finalMinuteAlerted = false;
   hostBroadcast({ type: 'gameStarted', phase: 'prep', timer: PREP_DURATION, mapRows: encodeMapGrid(newMap) });
-  hostBroadcast({ type: 'toast', message: `${list[seekerIdx].name} là NGƯỜI BẮT (Ánh sáng đỏ)! Chạy trốn trong 15s!`, style: 'warning' });
+  hostBroadcast({ type: 'toast', message: `${list[seekerIdx].name} là NGƯỜI BẮT! Hãy chạy trốn trong 15s!`, style: 'warning' });
 });
 btnBackLobby.addEventListener('click', () => { if (isHost && hostRoom) { hostRoom.phase = 'lobby'; hostEmitLobby(); } });
 
@@ -1215,7 +1454,7 @@ function requestGamePointerLock() {
 
 gameCanvas.addEventListener('click', () => { const modalOpen = !endOverlay.classList.contains('hidden') || !settingsOverlay.classList.contains('hidden'); if (!isTouchDevice && gameScreen.classList.contains('active') && !modalOpen) requestGamePointerLock(); });
 gameCanvas.addEventListener('contextmenu', (e) => e.preventDefault());
-window.addEventListener('mousedown', (e) => { const modalOpen = !endOverlay.classList.contains('hidden') || !settingsOverlay.classList.contains('hidden'); if (e.button === 2 && gameScreen.classList.contains('active') && !modalOpen) sendUseFlashlight(); });
+window.addEventListener('mousedown', (e) => { const modalOpen = !endOverlay.classList.contains('hidden') || !settingsOverlay.classList.contains('hidden'); if (e.button === 2 && gameScreen.classList.contains('active') && !modalOpen) sendPrimarySkillOrItem(); });
 document.addEventListener('pointerlockchange', () => { if (document.pointerLockElement === gameCanvas) pointerLockGraceUntil = performance.now() + 90; updateLockHint(); });
 window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; joystickVec = { dx: 0, dy: 0 }; });
 
@@ -1231,12 +1470,18 @@ window.addEventListener('mousemove', (e) => {
 function buildActionSnapshot() { return { x: Math.round(localPlayer.x * 10) / 10, y: Math.round(localPlayer.y * 10) / 10, yaw: Number(camYaw.toFixed(3)), moving: localPlayer.moving, tpSeq: localPlayer.tpSeq }; }
 function sendRescue() { const s = buildActionSnapshot(); if (isHost) hostHandleRescue(myId, s); else if (hostConn && hostConn.open) hostConn.send({ type: 'rescue', ...s }); }
 function sendUseFlashlight() { const s = buildActionSnapshot(); if (isHost) hostHandleUseFlashlight(myId, s); else if (hostConn && hostConn.open) hostConn.send({ type: 'useItem', ...s }); }
+function sendUseBlaster() { const s = buildActionSnapshot(); if (isHost) hostHandleBlaster(myId, s); else if (hostConn && hostConn.open) hostConn.send({ type: 'blaster', ...s }); }
+function sendPrimarySkillOrItem() {
+  const me = renderPlayers.find(p => p.id === myId);
+  if (me && me.role === 'seeker' && me.sansActive) sendUseBlaster();
+  else sendUseFlashlight();
+}
 
 window.addEventListener('keydown', (e) => {
   if (!gameScreen.classList.contains('active') || !settingsOverlay.classList.contains('hidden')) return;
   const k = e.key.toLowerCase(); keys[k] = true;
   if (e.code === 'Space' || k === 'e') { e.preventDefault(); sendRescue(); }
-  if (k === 'f' || k === 'q') { e.preventDefault(); sendUseFlashlight(); }
+  if (k === 'f' || k === 'q') { e.preventDefault(); sendPrimarySkillOrItem(); }
 });
 window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
 
@@ -1274,6 +1519,8 @@ gameCanvas.addEventListener('touchend', releaseLookTouch); gameCanvas.addEventLi
 
 btnMobileRescue.addEventListener('touchstart', (e) => { e.preventDefault(); sendRescue(); }, { passive: false }); btnMobileRescue.addEventListener('click', sendRescue);
 btnMobileFlash.addEventListener('touchstart', (e) => { e.preventDefault(); sendUseFlashlight(); }, { passive: false }); btnMobileFlash.addEventListener('click', sendUseFlashlight);
+btnMobileBlaster.addEventListener('touchstart', (e) => { e.preventDefault(); sendUseBlaster(); }, { passive: false });
+btnMobileBlaster.addEventListener('click', sendUseBlaster);
 
 function updateHUD() {
   const me = renderPlayers.find(p => p.id === myId); if (!me) return;
@@ -1296,7 +1543,7 @@ function updateHUD() {
   hudItemBadge.classList.toggle('hidden', !isAliveHider); hudItemBadge.classList.toggle('has-item', isAliveHider && me.hasItem);
   hudItemBadge.textContent = me.hasItem ? '🔦 ĐÈN (1/1)' : '🔦 Trống';
 
-  if (me.role === 'seeker') { hudRole.textContent = me.blindTimer > 0 ? `⚡ CHÓI (${me.blindTimer.toFixed(1)}s)` : '🔴 NGƯỜI BẮT'; hudRole.style.borderColor = me.blindTimer > 0 ? '#fde047' : '#ff595e'; hudRole.style.color = me.blindTimer > 0 ? '#fef08a' : '#ff8a8e'; }
+  if (me.role === 'seeker') { const isSansS = !!me.sansActive; hudRole.textContent = me.blindTimer > 0 ? `⚡ CHÓI (${me.blindTimer.toFixed(1)}s)` : (isSansS ? '🔵 NGƯỜI BẮT' : '🔴 NGƯỜI BẮT'); hudRole.style.borderColor = me.blindTimer > 0 ? '#fde047' : (isSansS ? '#38bdf8' : '#ff595e'); hudRole.style.color = me.blindTimer > 0 ? '#fef08a' : (isSansS ? '#7dd3fc' : '#ff8a8e'); }
   else if (me.status === 'alive') { hudRole.textContent = me.grace ? '🛡️ MIỄN NHIỄM' : '⚪ NGƯỜI CHẠY'; hudRole.style.borderColor = me.grace ? '#38bdf8' : '#e5e7eb'; hudRole.style.color = me.grace ? '#7dd3fc' : '#ffffff'; }
   else if (me.status === 'jailed') { hudRole.textContent = me.lockTimer > 0 ? `🔒 LỒNG (${me.lockTimer}s)` : '🆘 CỨU ĐƯỢC RỒI!'; hudRole.style.borderColor = me.lockTimer > 0 ? '#ff9f1c' : '#4ade80'; hudRole.style.color = me.lockTimer > 0 ? '#ffd166' : '#86efac'; }
   else { hudRole.textContent = '💀 KHÁN GIẢ'; hudRole.style.borderColor = '#ff595e'; hudRole.style.color = '#fca5a5'; }
@@ -1306,13 +1553,39 @@ function updateHUD() {
   const elimCount = renderPlayers.filter(p => p.role === 'hider' && p.status === 'eliminated').length;
   hudStats.textContent = `Sống: ${aliveCount} | Giam: ${jailedCount} | Loại: ${elimCount}`;
 
+  // Hiệu ứng & đếm ngược khi Người Chạy bị choáng bởi tia Gaster Blaster
+  const isStunned = (me.role === 'hider' && me.status === 'alive' && me.stunTimer > 0);
+  stunOverlay.classList.toggle('hidden', !isStunned);
+  if (isStunned) {
+    stunCountdown.textContent = `Đứng im không thể di chuyển: ${me.stunTimer.toFixed(1)}s`;
+    hudRole.textContent = `⚡ BỊ CHOÁNG (${me.stunTimer.toFixed(1)}s)`;
+    hudRole.style.borderColor = '#38bdf8';
+    hudRole.style.color = '#7dd3fc';
+  }
+
+  // Kỹ năng ẩn Gaster Blaster (chỉ hiện riêng cho Sans khi là Người Bắt trong giai đoạn đuổi bắt)
+  const isSansSeekerPlaying = (me.role === 'seeker' && me.sansActive && gamePhase === 'playing');
+  const blasterReady = isSansSeekerPlaying && ((me.blasterCd || 0) <= 0);
+  hudBlasterBadge.classList.toggle('hidden', !isSansSeekerPlaying);
+  hudBlasterBadge.classList.toggle('ready', blasterReady);
+  if (isSansSeekerPlaying) {
+    hudBlasterBadge.textContent = blasterReady ? '💀 BLASTER: SẴN SÀNG [F]' : `💀 Blaster: ${me.blasterCd}s`;
+  }
+
+  btnMobileBlaster.classList.toggle('hidden', !isSansSeekerPlaying);
+  btnMobileBlaster.classList.toggle('ready', blasterReady);
+  if (isSansSeekerPlaying) {
+    btnMobileBlaster.innerHTML = blasterReady ? '💀<br>BẮN' : `💀<br>${me.blasterCd}s`;
+  }
+
   const curX = localPlayer.initialized ? localPlayer.x : me.x, curY = localPlayer.initialized ? localPlayer.y : me.y;
   btnMobileRescue.classList.toggle('hidden', !isAliveHider); btnMobileFlash.classList.toggle('hidden', !(isAliveHider && me.hasItem));
   const hasRescuable = renderPlayers.some(p => p.role === 'hider' && p.status === 'jailed' && p.lockTimer <= 0);
-  const canRescue = (gamePhase === 'playing' && isAliveHider && isInRescueZone(curX, curY) && hasRescuable);
+  const canRescue = (gamePhase === 'playing' && isAliveHider && !isStunned && isInRescueZone(curX, curY) && hasRescuable);
   btnMobileRescue.classList.toggle('ready', canRescue);
   rescuePrompt.classList.toggle('hidden', !(canRescue && !isTouchDevice));
   flashPrompt.classList.toggle('hidden', !(isAliveHider && me.hasItem && !isTouchDevice));
+  blasterPrompt.classList.toggle('hidden', !(blasterReady && !isTouchDevice));
 }
 
 function drawMinimap(mePos, meObj) {
@@ -1387,7 +1660,7 @@ function drawMinimap(mePos, meObj) {
 
   mctx.save();
   mctx.translate(cx, cy);
-  mctx.fillStyle = meObj?.role === 'seeker' ? '#ff4757' : '#4ade80';
+  mctx.fillStyle = meObj?.role === 'seeker' ? (meObj.sansActive ? '#38bdf8' : '#ff4757') : '#4ade80';
   mctx.strokeStyle = '#0d0c06';
   mctx.lineWidth = 2;
   mctx.beginPath();
@@ -1463,6 +1736,79 @@ function animate(now) {
     if (b.life <= 0) { scene.remove(b.mesh); scene.remove(b.light); b.mesh.geometry.dispose(); b.mesh.material.dispose(); activeFlashBeams.splice(i, 1); }
   }
 
+  // Hoạt ảnh 3D Gaster Blaster của Sans
+  for (let i = activeBlasters3D.length - 1; i >= 0; i--) {
+    const b = activeBlasters3D[i];
+    b.elapsed += dt;
+    const ud = b.mesh.userData;
+    const fx = -Math.sin(b.yaw), fz = -Math.cos(b.yaw);
+
+    if (b.elapsed < b.chargeSec) {
+      // Giai đoạn 1: Xuất hiện + há hàm + tụ cầu năng lượng trắng xanh
+      const p = b.elapsed / b.chargeSec;
+      const easeOut = 1 - Math.pow(1 - p, 3);
+      const sc = 0.15 + easeOut * 0.90;
+      b.mesh.scale.set(sc, sc, sc);
+      b.mesh.position.set(b.baseX, b.baseY + (1 - easeOut) * 0.55, b.baseZ);
+      ud.skullGroup.rotation.z = (1 - easeOut) * 0.55;
+      ud.jawGroup.rotation.x = -0.05 - easeOut * 0.68;
+      const orbSc = 0.25 + p * 0.95;
+      ud.chargeGroup.scale.set(orbSc, orbSc, orbSc);
+      ud.orbRing1.rotation.z += dt * 9;
+      ud.orbRing2.rotation.x += dt * 11;
+      ud.light.intensity = 1.5 + p * 3.0;
+    } else if (b.elapsed < b.chargeSec + b.beamSec) {
+      // Giai đoạn 2: Phóng tia sáng trắng-xanh cực mạnh + giật lùi + sóng xung kích
+      if (!b.beamShown) {
+        b.beamShown = true;
+        ud.beamGroup.visible = true;
+      }
+      const bp = (b.elapsed - b.chargeSec) / b.beamSec;
+      const recoil = Math.sin(Math.min(1, bp * 3.5) * Math.PI) * 0.24;
+      const jitterX = (Math.random() - 0.5) * 0.045;
+      const jitterY = (Math.random() - 0.5) * 0.045;
+      b.mesh.scale.set(1.05, 1.05, 1.05);
+      b.mesh.position.set(b.baseX - fx * recoil + jitterX, b.baseY + jitterY, b.baseZ - fz * recoil);
+      ud.skullGroup.rotation.z = 0;
+      ud.jawGroup.rotation.x = -0.78 - Math.sin(t * 36) * 0.04;
+      ud.chargeGroup.scale.set(1.25, 1.25, 1.25);
+      ud.orbRing1.rotation.z += dt * 15;
+      ud.orbRing2.rotation.x += dt * 16;
+
+      const fadeOut = bp > 0.72 ? Math.max(0.05, (1 - bp) / 0.28) : 1.0;
+      const pulse = (0.92 + Math.sin(t * 48) * 0.14) * fadeOut;
+      ud.beamGroup.scale.set(pulse, pulse, 1);
+      ud.beamCore.material.opacity = 0.98 * fadeOut;
+      ud.beamMid.material.opacity = 0.74 * fadeOut;
+      ud.beamAura.material.opacity = 0.36 * fadeOut;
+      if (ud.beamPierceGlow) ud.beamPierceGlow.material.opacity = 0.24 * fadeOut;
+      ud.muzzleBurst.scale.setScalar(pulse * 1.15);
+      ud.light.intensity = 5.2 * fadeOut;
+
+      ud.beamRings.forEach(rm => {
+        rm.position.z -= dt * 26;
+        if (rm.position.z < -ud.beamLength) rm.position.z += ud.beamLength;
+        rm.rotation.z += dt * 7;
+        rm.material.opacity = 0.85 * fadeOut;
+      });
+    } else {
+      // Giai đoạn 3: Đóng hàm và tan biến gọn gàng
+      const ep = (b.elapsed - (b.chargeSec + b.beamSec)) / 0.35;
+      ud.beamGroup.visible = false;
+      ud.chargeGroup.visible = false;
+      const sc = Math.max(0.01, (1 - ep) * 1.05);
+      b.mesh.scale.set(sc, sc, sc);
+      b.mesh.position.set(b.baseX, b.baseY + ep * 0.55, b.baseZ);
+      ud.jawGroup.rotation.x = -0.78 * (1 - ep);
+      ud.light.intensity = Math.max(0, (1 - ep) * 2.0);
+      if (ep >= 1) {
+        scene.remove(b.mesh);
+        disposeObject3D(b.mesh);
+        activeBlasters3D.splice(i, 1);
+      }
+    }
+  }
+
   const meObj = renderPlayers.find(p => p.id === myId);
   if (meObj && localPlayer.initialized && gamePhase !== 'ended') {
     const keyTurnSpeed = 2.25 * userSettings.mouseSens;
@@ -1487,10 +1833,14 @@ function animate(now) {
     if (meObj.status === 'jailed') spd = HIDER_SPEED * 0.75;
     else if (meObj.status === 'eliminated') { spd = HIDER_SPEED * 1.15; physPhase = 'playing'; }
 
-    const proxy = { x: localPlayer.x, y: localPlayer.y, status: meObj.status };
-    moveWithCollision(proxy, wDx * spd, wDy * spd, dt, physPhase);
-    localPlayer.x = proxy.x; localPlayer.y = proxy.y;
-    localPlayer.moving = Math.hypot(localPlayer.x - prevX, localPlayer.y - prevY) > 0.15;
+    if (meObj.stunTimer > 0 && meObj.role === 'hider' && meObj.status === 'alive') {
+      localPlayer.moving = false;
+    } else {
+      const proxy = { x: localPlayer.x, y: localPlayer.y, status: meObj.status };
+      moveWithCollision(proxy, wDx * spd, wDy * spd, dt, physPhase);
+      localPlayer.x = proxy.x; localPlayer.y = proxy.y;
+      localPlayer.moving = Math.hypot(localPlayer.x - prevX, localPlayer.y - prevY) > 0.15;
+    }
 
     if (isHost && hostRoom && hostRoom.players[myId] && hostRoom.players[myId].tpSeq === localPlayer.tpSeq) {
       const hp = hostRoom.players[myId]; hp.x = localPlayer.x; hp.y = localPlayer.y; hp.yaw = camYaw; hp.moving = localPlayer.moving;
@@ -1508,13 +1858,13 @@ function animate(now) {
   const smoothAlpha = 1 - Math.exp(-14 * dt), activeIds = new Set();
   const viewerX = localPlayer.initialized ? localPlayer.x : (meObj ? meObj.x : 0);
   const viewerY = localPlayer.initialized ? localPlayer.y : (meObj ? meObj.y : 0);
-  let seekerLightPos = null;
+  let seekerLightPos = null, seekerLightIsSans = false;
 
   renderPlayers.forEach(p => {
     activeIds.add(p.id);
     if (p.id === myId) {
       if (playerMeshes[p.id]) playerMeshes[p.id].mesh.visible = false;
-      if (p.role === 'seeker' && localPlayer.initialized) seekerLightPos = { x: localPlayer.x, y: localPlayer.y };
+      if (p.role === 'seeker' && localPlayer.initialized) { seekerLightPos = { x: localPlayer.x, y: localPlayer.y }; seekerLightIsSans = !!p.sansActive; }
       return;
     }
     const sp = smoothPlayers[p.id] || { x: p.x, y: p.y, yaw: p.yaw };
@@ -1522,7 +1872,7 @@ function animate(now) {
     else { sp.x += (p.x - sp.x) * smoothAlpha; sp.y += (p.y - sp.y) * smoothAlpha; }
     let dyaw = p.yaw - sp.yaw; while (dyaw > Math.PI) dyaw -= Math.PI * 2; while (dyaw < -Math.PI) dyaw += Math.PI * 2;
     sp.yaw += dyaw * smoothAlpha; smoothPlayers[p.id] = sp;
-    if (p.role === 'seeker') seekerLightPos = { x: sp.x, y: sp.y };
+    if (p.role === 'seeker') { seekerLightPos = { x: sp.x, y: sp.y }; seekerLightIsSans = !!p.sansActive; }
 
     const entry = syncPlayerMesh3D(p), visibleInWorld = (p.status !== 'eliminated');
     entry.mesh.visible = visibleInWorld;
@@ -1535,6 +1885,14 @@ function animate(now) {
         ud.sansEyeGlow.scale.set(s, s, 1);
       }
       if (ud.seekerAuraRing) { const pulse = 1 + Math.sin(t * 6) * 0.14; ud.seekerAuraRing.scale.set(pulse, pulse, 1); ud.seekerAuraRing.material.opacity = 0.5 + Math.sin(t * 6) * 0.22; }
+      if (ud.stunEffectGroup) {
+        const showStun = (p.role === 'hider' && p.status === 'alive' && p.stunTimer > 0);
+        ud.stunEffectGroup.visible = showStun;
+        if (showStun) {
+          ud.stunEffectGroup.userData.ring1.rotation.z += dt * 5.2;
+          ud.stunEffectGroup.userData.ring2.rotation.z -= dt * 6.4;
+        }
+      }
 
       const showXrayForThis = seekerXrayPulseOn && p.role === 'hider' && p.status === 'alive';
       if (ud.xrayGroup) ud.xrayGroup.visible = showXrayForThis;
@@ -1560,8 +1918,10 @@ function animate(now) {
 
   if (seekerLightPos && gamePhase !== 'ended') {
     seekerRedLight.visible = true;
+    seekerRedLight.color.setHex(seekerLightIsSans ? 0x1e9eff : 0xff1a24);
     seekerRedLight.position.set(seekerLightPos.x * WORLD_SCALE, 1.85, seekerLightPos.y * WORLD_SCALE);
-    seekerRedLight.intensity = ((meObj && meObj.role === 'seeker') ? 1.45 : 3.4) + Math.sin(t * 5.5) * 0.45;
+    const baseInt = (meObj && meObj.role === 'seeker') ? (seekerLightIsSans ? 1.75 : 1.45) : (seekerLightIsSans ? 4.0 : 3.4);
+    seekerRedLight.intensity = baseInt + Math.sin(t * 5.5) * 0.5;
   } else seekerRedLight.visible = false;
 
   for (const id in playerMeshes) if (!activeIds.has(id)) { disposeNameTag(playerMeshes[id].nameTag); scene.remove(playerMeshes[id].mesh); delete playerMeshes[id]; }

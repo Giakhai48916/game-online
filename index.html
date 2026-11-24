@@ -144,6 +144,13 @@
       <div class="blind-sub" id="blind-countdown">Không thể bắt người trong 5.0s</div>
     </div>
 
+    <div id="stun-overlay" class="hidden">
+      <div class="stun-banner">
+        <div class="stun-title">⚡ BỊ CHOÁNG! ⚡</div>
+        <div class="stun-sub" id="stun-countdown">Đứng im không thể di chuyển: 5.0s</div>
+      </div>
+    </div>
+
     <div id="hud">
       <div class="hud-row">
         <button id="btn-hud-fs" type="button" class="hud-btn" title="Toàn màn hình">⛶ Full</button>
@@ -155,12 +162,12 @@
         <div class="hud-box" id="hud-stats">Sống: 0 | Giam: 0 | Loại: 0</div>
         <div class="hud-box hidden" id="hud-item-badge">🔦 Trống</div>
         <div class="hud-box hidden" id="hud-xray-badge">👁️ Thấu Thị</div>
+        <div class="hud-box hidden" id="hud-blaster-badge">💀 BLASTER</div>
       </div>
     </div>
 
     <div id="minimap-wrap" title="Minimap xoay theo hướng nhìn">
       <canvas id="minimap-canvas" width="140" height="140"></canvas>
-      <div id="minimap-compass">▲ HƯỚNG NHÌN</div>
     </div>
     <div id="pc-lock-hint" class="hidden">Click màn hình để xoay 360° (WASD đi &bull; F / Chuột phải: Đèn Pin &bull; E: Cứu &bull; ESC mở chuột)</div>
     <div id="mobile-swipe-tip" class="hidden">👆 Vuốt màn hình bên phải để xoay góc nhìn 360°</div>
@@ -169,6 +176,7 @@
     <div id="action-prompts">
       <div id="rescue-prompt" class="prompt-pill hidden">Nhấn SPACE / E để CỨU!</div>
       <div id="flash-prompt" class="prompt-pill hidden">🔦 Nhấn F / Chuột Phải chiếu ĐÈN PIN!</div>
+      <div id="blaster-prompt" class="prompt-pill hidden">💀 Nhấn F / Chuột Phải bắn ĐẦU XƯƠNG!</div>
     </div>
 
     <div id="mobile-controls" class="hidden">
@@ -179,6 +187,7 @@
       </div>
       <button id="btn-mobile-flash" type="button" class="hidden">🔦<br>ĐÈN</button>
       <button id="btn-mobile-rescue" type="button">CỨU</button>
+      <button id="btn-mobile-blaster" type="button" class="hidden">💀<br>BẮN</button>
     </div>
 
     <!-- Bảng kết thúc ván -->
