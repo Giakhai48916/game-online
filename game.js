@@ -3,10 +3,21 @@ document.getElementById('lobby-rules-text').innerHTML =
 
 let userSettings = { touchSens: 1.0, mouseSens: 1.0, invertY: false };
 let myCosmetics = { skin: 'white', hat: 'hutao' };
-let hasSansSecretUnlocked = false; // Chỉ bật lên khi nhập đúng tên 'sans' (không phân biệt hoa thường khi gõ)
+let activeSecretChar = null; // null | 'sans' | 'knight'
+
+function detectSecretCharFromName(rawName) {
+  const n = (rawName || '').trim().toLowerCase();
+  if (n === 'sans') return 'sans';
+  if (n === 'knight') return 'knight';
+  return null;
+}
 
 function isSansSecretName(rawName) {
-  return (rawName || '').trim().toLowerCase() === 'sans';
+  return detectSecretCharFromName(rawName) === 'sans';
+}
+
+function isKnightSecretName(rawName) {
+  return detectSecretCharFromName(rawName) === 'knight';
 }
 
 try {
@@ -24,7 +35,7 @@ try {
   const savedName = localStorage.getItem('br3d_name');
   if (savedName) {
     document.getElementById('player-name').value = savedName;
-    if (isSansSecretName(savedName)) hasSansSecretUnlocked = true;
+    activeSecretChar = detectSecretCharFromName(savedName);
   }
 } catch (e) {}
 
@@ -57,6 +68,32 @@ function playUndertaleSansVoice() {
       osc.stop(start + 0.052);
     });
     setTimeout(() => ctx.close().catch(() => {}), 450);
+  } catch (e) {}
+}
+
+// Âm thanh chuông Linh Hồn du dương phong cách Hollow Knight khi mở khóa Knight
+function playHollowKnightSoulChime() {
+  try {
+    const ctx = getSharedAudioCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const notes = [440.0, 523.25, 659.25, 880.0]; // A4 - C5 - E5 - A5 (âm hưởng Hallownest)
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const sub = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      sub.type = 'triangle';
+      const st = now + idx * 0.085;
+      osc.frequency.setValueAtTime(freq, st);
+      sub.frequency.setValueAtTime(freq * 0.5, st);
+      gain.gain.setValueAtTime(0.001, st);
+      gain.gain.linearRampToValueAtTime(0.075, st + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0008, st + 0.55);
+      osc.connect(gain); sub.connect(gain); gain.connect(ctx.destination);
+      osc.start(st); sub.start(st);
+      osc.stop(st + 0.58); sub.stop(st + 0.58);
+    });
   } catch (e) {}
 }
 
@@ -202,31 +239,41 @@ function refreshPreviewModels() {
   const hex = getSkinInfo(myCosmetics.skin).hex;
   [menuPreview, lobbyPreview].forEach(box => {
     if (box.char) box.sc.remove(box.char);
-    box.char = buildCharacterMesh(hex, myCosmetics.hat, false, false, hasSansSecretUnlocked);
+    box.char = buildCharacterMesh(hex, myCosmetics.hat, false, false, activeSecretChar);
     box.char.rotation.y = box.angle;
     box.sc.add(box.char);
   });
 }
 
 function updateWardrobeLockUI() {
-  const locked = hasSansSecretUnlocked;
+  const isSans = (activeSecretChar === 'sans');
+  const isKnight = (activeSecretChar === 'knight');
+  const locked = isSans || isKnight;
   ['menu', 'lobby'].forEach(prefix => {
     const box = document.getElementById(`${prefix}-wardrobe-box`);
     const customEl = document.getElementById(`${prefix}-wardrobe-custom`);
-    const lockEl = document.getElementById(`${prefix}-sans-locked`);
-    if (box) box.classList.toggle('sans-locked-theme', locked);
+    const sansLockEl = document.getElementById(`${prefix}-sans-locked`);
+    const knightLockEl = document.getElementById(`${prefix}-knight-locked`);
+    if (box) {
+      box.classList.toggle('sans-locked-theme', isSans);
+      box.classList.toggle('knight-locked-theme', isKnight);
+    }
     if (customEl) customEl.classList.toggle('hidden', locked);
-    if (lockEl) lockEl.classList.toggle('hidden', !locked);
+    if (sansLockEl) sansLockEl.classList.toggle('hidden', !isSans);
+    if (knightLockEl) knightLockEl.classList.toggle('hidden', !isKnight);
   });
 }
 
-function setSansSecretState(unlocked, playSound = false) {
-  const changed = (hasSansSecretUnlocked !== unlocked);
-  hasSansSecretUnlocked = unlocked;
+function setSecretCharState(newSecret, playSound = false) {
+  const changed = (activeSecretChar !== newSecret);
+  activeSecretChar = newSecret;
   updateWardrobeLockUI();
   refreshPreviewModels();
   if (changed) {
-    if (unlocked && playSound) playUndertaleSansVoice();
+    if (playSound) {
+      if (newSecret === 'sans') playUndertaleSansVoice();
+      else if (newSecret === 'knight') playHollowKnightSoulChime();
+    }
     syncMyCosmeticsToRoom();
   }
 }
@@ -241,7 +288,7 @@ function renderWardrobeUI() {
       btn.className = 'skin-dot' + (myCosmetics.skin === s.id ? ' selected' : '');
       btn.style.backgroundColor = s.css;
       btn.addEventListener('click', () => {
-        if (hasSansSecretUnlocked) return;
+        if (activeSecretChar) return;
         myCosmetics.skin = s.id;
         persistCosmetics();
         renderWardrobeUI(); refreshPreviewModels(); syncMyCosmeticsToRoom();
@@ -259,7 +306,7 @@ function renderWardrobeUI() {
       btn.className = 'hat-btn' + (myCosmetics.hat === h.id ? ' selected' : '');
       btn.textContent = h.name;
       btn.addEventListener('click', () => {
-        if (hasSansSecretUnlocked) return;
+        if (activeSecretChar) return;
         myCosmetics.hat = h.id;
         persistCosmetics();
         renderWardrobeUI(); refreshPreviewModels(); syncMyCosmeticsToRoom();
@@ -764,24 +811,27 @@ function spawnGasterBlaster3D(x, y, yaw, beamDist, chargeSec, beamSec) {
 
 function syncPlayerMesh3D(p) {
   const existing = playerMeshes[p.id];
-  const isSansMode = !!p.sansActive;
-  const needRebuild = !existing || existing.skin !== p.skin || existing.hat !== p.hat || existing.role !== p.role || existing.sansMode !== isSansMode;
+  const secChar = p.secretChar || (p.sansActive ? 'sans' : (p.knightActive ? 'knight' : null));
+  const needRebuild = !existing || existing.skin !== p.skin || existing.hat !== p.hat || existing.role !== p.role || existing.secretChar !== secChar;
   if (needRebuild) {
     if (existing) { disposeNameTag(existing.nameTag); scene.remove(existing.mesh); }
-    const charMesh = buildCharacterMesh(getSkinInfo(p.skin).hex, p.hat, p.role === 'seeker', p.role === 'hider', isSansMode);
+    const charMesh = buildCharacterMesh(getSkinInfo(p.skin).hex, p.hat, p.role === 'seeker', p.role === 'hider', secChar);
     scene.add(charMesh);
-    playerMeshes[p.id] = { mesh: charMesh, skin: p.skin, hat: p.hat, role: p.role, sansMode: isSansMode, tagKey: '', nameTag: null };
+    playerMeshes[p.id] = { mesh: charMesh, skin: p.skin, hat: p.hat, role: p.role, secretChar: secChar, tagKey: '', nameTag: null };
   }
   const entry = playerMeshes[p.id];
   const lockSec = p.status === 'jailed' ? Math.ceil(p.lockTimer || 0) : 0;
   const blindSec = p.blindTimer > 0 ? Math.ceil(p.blindTimer) : 0;
   const stunSec = p.stunTimer > 0 ? Math.ceil(p.stunTimer) : 0;
-  const tagKey = `${p.status}|${lockSec}|${blindSec}|${stunSec}|${p.grace ? 1 : 0}`;
+  const tagKey = `${p.status}|${lockSec}|${blindSec}|${stunSec}|${p.grace ? 1 : 0}|${secChar || ''}`;
   if (entry.tagKey !== tagKey) {
     entry.tagKey = tagKey;
     if (entry.nameTag) { entry.mesh.remove(entry.nameTag); disposeNameTag(entry.nameTag); }
     let label = p.name, color = '#ffffff';
-    if (p.role === 'seeker') { label = blindSec > 0 ? `[⚡ CHÓI ${blindSec}s] ${p.name}` : `[BẮT] ${p.name}`; color = blindSec > 0 ? '#fde047' : (p.sansActive ? '#38bdf8' : '#ff6b6b'); }
+    if (p.role === 'seeker') {
+      label = blindSec > 0 ? `[⚡ CHÓI ${blindSec}s] ${p.name}` : `[BẮT] ${p.name}`;
+      color = blindSec > 0 ? '#fde047' : (secChar === 'sans' ? '#38bdf8' : (secChar === 'knight' ? '#c4b5fd' : '#ff6b6b'));
+    }
     else if (p.status === 'jailed') { label = lockSec > 0 ? `[KHÓA ${lockSec}s] ${p.name}` : `[CỨU ĐƯỢC!] ${p.name}`; color = lockSec > 0 ? '#ff9f1c' : '#4ade80'; }
     else if (stunSec > 0) { label = `[⚡ CHOÁNG ${stunSec}s] ${p.name}`; color = '#38bdf8'; }
     else if (p.grace) { label = `[MIỄN NHIỄM] ${p.name}`; color = '#38bdf8'; }
@@ -850,10 +900,10 @@ const endWaitHost = document.getElementById('end-wait-host');
 const minimapCanvas = document.getElementById('minimap-canvas');
 const mctx = minimapCanvas.getContext('2d');
 
-// Chỉ mở khóa nhân vật ẩn khi nhập đúng chữ "sans" lúc nhập tên
+// Chỉ mở khóa nhân vật ẩn khi nhập đúng tên bí mật ("sans" hoặc "knight")
 nameInput.addEventListener('input', () => {
-  const wantSans = isSansSecretName(nameInput.value);
-  setSansSecretState(wantSans, wantSans && !hasSansSecretUnlocked);
+  const detected = detectSecretCharFromName(nameInput.value);
+  setSecretCharState(detected, !!detected && detected !== activeSecretChar);
 });
 
 function showScreen(sc) {
@@ -880,11 +930,13 @@ function hideSwipeTip() {
 
 function createPlayerObj(id, name, cosmetics, isBot = false) {
   const cleanName = (name || 'Người chơi').trim().slice(0, 14) || 'Người chơi';
-  const wantsSans = !isBot && isSansSecretName(cleanName);
+  const secretWanted = isBot ? null : detectSecretCharFromName(cleanName);
   return {
     id, name: cleanName,
     skin: cosmetics?.skin || 'white', hat: cosmetics?.hat || 'none',
-    wantsSans, sansActive: false, isBot,
+    wantsSans: secretWanted === 'sans',
+    wantsKnight: secretWanted === 'knight',
+    sansActive: false, knightActive: false, secretChar: null, isBot,
     x: (CENTER_TILE + 0.5) * TILE_SIZE, y: (CENTER_TILE + 0.5) * TILE_SIZE,
     yaw: 0, tpSeq: 0, role: 'hider', status: 'alive',
     lockTimer: 0, graceTimer: 0, blindTimer: 0, stunTimer: 0, blasterCooldown: 0, hasItem: false,
@@ -892,31 +944,47 @@ function createPlayerObj(id, name, cosmetics, isBot = false) {
   };
 }
 
-// Trong 1 phòng chỉ có tối đa 1 người được sở hữu skin ẩn Sans; nếu có >= 2 người tên "sans" thì chọn ngẫu nhiên 1 người
-function assignUniqueSansInRoom() {
+// Mỗi phòng chỉ tối đa 1 Sans và tối đa 1 Knight; nếu có >= 2 người nhập trùng tên ẩn thì chọn ngẫu nhiên đúng 1 người
+function assignUniqueSecretsInRoom(forceReroll = false) {
   if (!hostRoom) return;
   const all = Object.values(hostRoom.players);
-  all.forEach(p => { p.sansActive = false; });
 
-  const candidates = all.filter(p => !p.isBot && isSansSecretName(p.name));
-  if (candidates.length === 1) {
-    candidates[0].sansActive = true;
-  } else if (candidates.length > 1) {
-    const chosen = candidates[Math.floor(Math.random() * candidates.length)];
-    chosen.sansActive = true;
-  }
+  const pickOneFor = (secretKey) => {
+    const candidates = all.filter(p => !p.isBot && detectSecretCharFromName(p.name) === secretKey);
+    const currentHolder = candidates.find(p => p.secretChar === secretKey);
+    let chosen = null;
+    if (candidates.length === 1) {
+      chosen = candidates[0];
+    } else if (candidates.length > 1) {
+      chosen = (!forceReroll && currentHolder) ? currentHolder : candidates[Math.floor(Math.random() * candidates.length)];
+    }
+    return chosen ? chosen.id : null;
+  };
+
+  const sansHolderId = pickOneFor('sans');
+  const knightHolderId = pickOneFor('knight');
+
+  all.forEach(p => {
+    p.sansActive = (p.id === sansHolderId);
+    p.knightActive = (p.id === knightHolderId);
+    p.secretChar = p.sansActive ? 'sans' : (p.knightActive ? 'knight' : null);
+  });
 }
 
 function syncMyCosmeticsToRoom() {
-  const wantsSans = isSansSecretName(nameInput.value);
+  const secretWanted = detectSecretCharFromName(nameInput.value);
   if (isHost && hostRoom && hostRoom.players[myId]) {
     hostRoom.players[myId].skin = myCosmetics.skin;
     hostRoom.players[myId].hat = myCosmetics.hat;
-    hostRoom.players[myId].wantsSans = wantsSans;
-    assignUniqueSansInRoom();
+    hostRoom.players[myId].wantsSans = (secretWanted === 'sans');
+    hostRoom.players[myId].wantsKnight = (secretWanted === 'knight');
+    assignUniqueSecretsInRoom(false);
     if (hostRoom.phase === 'lobby') hostEmitLobby();
   } else if (hostConn && hostConn.open) {
-    hostConn.send({ type: 'cosmetics', skin: myCosmetics.skin, hat: myCosmetics.hat, wantsSans });
+    hostConn.send({
+      type: 'cosmetics', skin: myCosmetics.skin, hat: myCosmetics.hat,
+      wantsSans: secretWanted === 'sans', wantsKnight: secretWanted === 'knight'
+    });
   }
 }
 
@@ -930,12 +998,13 @@ function hostSendTo(pid, packet) {
 }
 function hostEmitLobby() {
   if (!hostRoom) return;
-  assignUniqueSansInRoom();
+  assignUniqueSecretsInRoom(false);
   hostBroadcast({
     type: 'lobbyUpdate', code: hostRoom.code, hostId: hostRoom.hostId,
     phase: hostRoom.phase, matchDuration: hostRoom.matchDuration,
     players: Object.values(hostRoom.players).map(p => ({
-      id: p.id, name: p.name, skin: p.skin, hat: p.hat, sansActive: !!p.sansActive, isBot: p.isBot
+      id: p.id, name: p.name, skin: p.skin, hat: p.hat,
+      sansActive: !!p.sansActive, knightActive: !!p.knightActive, secretChar: p.secretChar || null, isBot: p.isBot
     }))
   });
 }
@@ -1238,7 +1307,7 @@ function startHostGameLoop() {
       type: 'gameState', phase: hostRoom.phase, timer: Math.ceil(hostRoom.timer),
       isFinalMinute: inFinalMin, xrayActive: pulseOn, xrayCountdown: pulseCountdown, items: hostRoom.items,
       players: players.map(p => ({
-        id: p.id, name: p.name, skin: p.skin, hat: p.hat, sansActive: !!p.sansActive,
+        id: p.id, name: p.name, skin: p.skin, hat: p.hat, sansActive: !!p.sansActive, knightActive: !!p.knightActive, secretChar: p.secretChar || null,
         x: Math.round(p.x * 10) / 10, y: Math.round(p.y * 10) / 10, yaw: Number(p.yaw.toFixed(2)),
         tpSeq: p.tpSeq, role: p.role, status: p.status, lockTimer: Math.ceil(p.lockTimer),
         blindTimer: Number(p.blindTimer.toFixed(1)),
@@ -1259,9 +1328,9 @@ function handleClientPacket(data) {
     showScreen(lobbyScreen);
 
     const meLobby = data.players.find(p => p.id === myId);
-    const iGotSans = !!(meLobby && meLobby.sansActive);
-    if (iGotSans !== hasSansSecretUnlocked) {
-      hasSansSecretUnlocked = iGotSans;
+    const myAssignedSecret = meLobby ? (meLobby.secretChar || (meLobby.sansActive ? 'sans' : (meLobby.knightActive ? 'knight' : null))) : null;
+    if (myAssignedSecret !== activeSecretChar) {
+      activeSecretChar = myAssignedSecret;
       updateWardrobeLockUI();
     }
     refreshPreviewModels();
@@ -1357,7 +1426,7 @@ btnCreate.addEventListener('click', () => {
         guestConns[conn.peer] = conn; hostRoom.players[conn.peer] = createPlayerObj(conn.peer, msg.name, { skin: msg.skin, hat: msg.hat }, false); hostEmitLobby();
       } else if (msg.type === 'cosmetics') {
         const pl = hostRoom.players[conn.peer];
-        if (pl) { pl.skin = msg.skin; pl.hat = msg.hat; pl.wantsSans = !!msg.wantsSans; if (hostRoom.phase === 'lobby') hostEmitLobby(); }
+        if (pl) { pl.skin = msg.skin; pl.hat = msg.hat; pl.wantsSans = !!msg.wantsSans; pl.wantsKnight = !!msg.wantsKnight; if (hostRoom.phase === 'lobby') hostEmitLobby(); }
       }
       else if (msg.type === 'pos') hostAcceptGuestPos(conn.peer, msg);
       else if (msg.type === 'rescue') hostHandleRescue(conn.peer, msg);
@@ -1418,7 +1487,7 @@ btnStartGame.addEventListener('click', () => {
   if (list.length < 2) { lobbyError.textContent = 'Cần ít nhất 2 người (hoặc bấm "+ Thêm Bot")!'; return; }
   if (isTouchDevice && !isInFullscreen()) tryEnterFullscreen(true);
 
-  assignUniqueSansInRoom();
+  assignUniqueSecretsInRoom(true);
   const newMap = generateRandomBackroomsMap(); activeMapGrid = newMap; computeMapNavigationData(newMap);
   const seekerIdx = Math.floor(Math.random() * list.length), spawns = validHiderSpawns.slice().sort(() => Math.random() - 0.5);
   let sIdx = 0;
@@ -1543,7 +1612,7 @@ function updateHUD() {
   hudItemBadge.classList.toggle('hidden', !isAliveHider); hudItemBadge.classList.toggle('has-item', isAliveHider && me.hasItem);
   hudItemBadge.textContent = me.hasItem ? '🔦 ĐÈN (1/1)' : '🔦 Trống';
 
-  if (me.role === 'seeker') { const isSansS = !!me.sansActive; hudRole.textContent = me.blindTimer > 0 ? `⚡ CHÓI (${me.blindTimer.toFixed(1)}s)` : (isSansS ? '🔵 NGƯỜI BẮT' : '🔴 NGƯỜI BẮT'); hudRole.style.borderColor = me.blindTimer > 0 ? '#fde047' : (isSansS ? '#38bdf8' : '#ff595e'); hudRole.style.color = me.blindTimer > 0 ? '#fef08a' : (isSansS ? '#7dd3fc' : '#ff8a8e'); }
+  if (me.role === 'seeker') { const isSansS = !!me.sansActive, isKnightS = !!me.knightActive; hudRole.textContent = me.blindTimer > 0 ? `⚡ CHÓI (${me.blindTimer.toFixed(1)}s)` : (isSansS ? '🔵 NGƯỜI BẮT' : (isKnightS ? '🟣 NGƯỜI BẮT' : '🔴 NGƯỜI BẮT')); hudRole.style.borderColor = me.blindTimer > 0 ? '#fde047' : (isSansS ? '#38bdf8' : (isKnightS ? '#a78bfa' : '#ff595e')); hudRole.style.color = me.blindTimer > 0 ? '#fef08a' : (isSansS ? '#7dd3fc' : (isKnightS ? '#e9d5ff' : '#ff8a8e')); }
   else if (me.status === 'alive') { hudRole.textContent = me.grace ? '🛡️ MIỄN NHIỄM' : '⚪ NGƯỜI CHẠY'; hudRole.style.borderColor = me.grace ? '#38bdf8' : '#e5e7eb'; hudRole.style.color = me.grace ? '#7dd3fc' : '#ffffff'; }
   else if (me.status === 'jailed') { hudRole.textContent = me.lockTimer > 0 ? `🔒 LỒNG (${me.lockTimer}s)` : '🆘 CỨU ĐƯỢC RỒI!'; hudRole.style.borderColor = me.lockTimer > 0 ? '#ff9f1c' : '#4ade80'; hudRole.style.color = me.lockTimer > 0 ? '#ffd166' : '#86efac'; }
   else { hudRole.textContent = '💀 KHÁN GIẢ'; hudRole.style.borderColor = '#ff595e'; hudRole.style.color = '#fca5a5'; }
@@ -1660,7 +1729,7 @@ function drawMinimap(mePos, meObj) {
 
   mctx.save();
   mctx.translate(cx, cy);
-  mctx.fillStyle = meObj?.role === 'seeker' ? (meObj.sansActive ? '#38bdf8' : '#ff4757') : '#4ade80';
+  mctx.fillStyle = meObj?.role === 'seeker' ? (meObj.sansActive ? '#38bdf8' : (meObj.knightActive ? '#a78bfa' : '#ff4757')) : '#4ade80';
   mctx.strokeStyle = '#0d0c06';
   mctx.lineWidth = 2;
   mctx.beginPath();
@@ -1702,6 +1771,13 @@ function animate(now) {
     if (activeBox.char.userData.sansEyeGlow) {
       const s = 0.22 + Math.sin(t * 5.0) * 0.03;
       activeBox.char.userData.sansEyeGlow.scale.set(s, s, 1);
+    }
+    if (activeBox.char.userData.knightSoulGroup) {
+      activeBox.char.userData.knightSoulGroup.children.forEach(sp => {
+        const d = sp.userData;
+        const a = d.baseAng + t * 0.9;
+        sp.position.set(Math.cos(a) * d.rad, d.baseY + Math.sin(t * 2.2 + d.phase) * 0.09, Math.sin(a) * d.rad);
+      });
     }
     activeBox.ren.render(activeBox.sc, activeBox.cam);
     return;
@@ -1858,13 +1934,13 @@ function animate(now) {
   const smoothAlpha = 1 - Math.exp(-14 * dt), activeIds = new Set();
   const viewerX = localPlayer.initialized ? localPlayer.x : (meObj ? meObj.x : 0);
   const viewerY = localPlayer.initialized ? localPlayer.y : (meObj ? meObj.y : 0);
-  let seekerLightPos = null, seekerLightIsSans = false;
+  let seekerLightPos = null, seekerLightTheme = 'normal';
 
   renderPlayers.forEach(p => {
     activeIds.add(p.id);
     if (p.id === myId) {
       if (playerMeshes[p.id]) playerMeshes[p.id].mesh.visible = false;
-      if (p.role === 'seeker' && localPlayer.initialized) { seekerLightPos = { x: localPlayer.x, y: localPlayer.y }; seekerLightIsSans = !!p.sansActive; }
+      if (p.role === 'seeker' && localPlayer.initialized) { seekerLightPos = { x: localPlayer.x, y: localPlayer.y }; seekerLightTheme = p.sansActive ? 'sans' : (p.knightActive ? 'knight' : 'normal'); }
       return;
     }
     const sp = smoothPlayers[p.id] || { x: p.x, y: p.y, yaw: p.yaw };
@@ -1872,7 +1948,7 @@ function animate(now) {
     else { sp.x += (p.x - sp.x) * smoothAlpha; sp.y += (p.y - sp.y) * smoothAlpha; }
     let dyaw = p.yaw - sp.yaw; while (dyaw > Math.PI) dyaw -= Math.PI * 2; while (dyaw < -Math.PI) dyaw += Math.PI * 2;
     sp.yaw += dyaw * smoothAlpha; smoothPlayers[p.id] = sp;
-    if (p.role === 'seeker') { seekerLightPos = { x: sp.x, y: sp.y }; seekerLightIsSans = !!p.sansActive; }
+    if (p.role === 'seeker') { seekerLightPos = { x: sp.x, y: sp.y }; seekerLightTheme = p.sansActive ? 'sans' : (p.knightActive ? 'knight' : 'normal'); }
 
     const entry = syncPlayerMesh3D(p), visibleInWorld = (p.status !== 'eliminated');
     entry.mesh.visible = visibleInWorld;
@@ -1883,6 +1959,14 @@ function animate(now) {
       if (ud.sansEyeGlow) {
         const s = (p.role === 'seeker' ? 0.34 : 0.20) + Math.sin(t * 8.0) * 0.04;
         ud.sansEyeGlow.scale.set(s, s, 1);
+      }
+      if (ud.knightSoulGroup) {
+        const speed = p.role === 'seeker' ? 1.55 : 0.9;
+        ud.knightSoulGroup.children.forEach(sp => {
+          const d = sp.userData;
+          const a = d.baseAng + t * speed;
+          sp.position.set(Math.cos(a) * d.rad, d.baseY + Math.sin(t * 2.6 + d.phase) * 0.11, Math.sin(a) * d.rad);
+        });
       }
       if (ud.seekerAuraRing) { const pulse = 1 + Math.sin(t * 6) * 0.14; ud.seekerAuraRing.scale.set(pulse, pulse, 1); ud.seekerAuraRing.material.opacity = 0.5 + Math.sin(t * 6) * 0.22; }
       if (ud.stunEffectGroup) {
@@ -1918,9 +2002,11 @@ function animate(now) {
 
   if (seekerLightPos && gamePhase !== 'ended') {
     seekerRedLight.visible = true;
-    seekerRedLight.color.setHex(seekerLightIsSans ? 0x1e9eff : 0xff1a24);
+    const lightHex = seekerLightTheme === 'sans' ? 0x1e9eff : (seekerLightTheme === 'knight' ? 0x8b6dff : 0xff1a24);
+    seekerRedLight.color.setHex(lightHex);
     seekerRedLight.position.set(seekerLightPos.x * WORLD_SCALE, 1.85, seekerLightPos.y * WORLD_SCALE);
-    const baseInt = (meObj && meObj.role === 'seeker') ? (seekerLightIsSans ? 1.75 : 1.45) : (seekerLightIsSans ? 4.0 : 3.4);
+    const isSpecial = (seekerLightTheme !== 'normal');
+    const baseInt = (meObj && meObj.role === 'seeker') ? (isSpecial ? 1.78 : 1.45) : (isSpecial ? 4.1 : 3.4);
     seekerRedLight.intensity = baseInt + Math.sin(t * 5.5) * 0.5;
   } else seekerRedLight.visible = false;
 

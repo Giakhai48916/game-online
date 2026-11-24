@@ -1130,9 +1130,459 @@ function buildSansCharacterMesh(isSeeker = false, includeXray = false) {
   return root;
 }
 
-function buildCharacterMesh(skinHex, hatId, isSeeker, includeXray = false, isSans = false) {
-  if (isSans) {
+
+// =========================================================================
+// MÔ HÌNH 3D THE KNIGHT (HOLLOW KNIGHT) - ĐIÊU KHẮC LIỀN KHỐI CHẤT LƯỢNG CAO
+// =========================================================================
+
+// 1. Khối mặt nạ sứ trắng điêu khắc 1 mảnh (đầu chữ U tròn mượt, hốc mắt dọc lõm 3D thật)
+function createSculptedKnightMaskGeometry() {
+  const segX = 64, segY = 48;
+  const positions = [], uvs = [], indices = [];
+
+  for (let j = 0; j <= segY; j++) {
+    const v = j / segY;
+    const phi = (v - 0.5) * Math.PI;
+    const cphi = Math.cos(phi);
+    const sphi = Math.sin(phi);
+
+    for (let i = 0; i <= segX; i++) {
+      const u = i / segX;
+      const ang = (u - 0.5) * Math.PI * 2;
+      const ux = -Math.sin(ang) * cphi;
+      const uy = sphi;
+      const uz = -Math.cos(ang) * cphi;
+
+      // Dáng siêu ellipsoid mềm tạo khuôn mặt nạ Vessel chuẩn Hollow Knight
+      const p = 2.6;
+      const normP = Math.pow(Math.pow(Math.abs(ux), p) + Math.pow(Math.abs(uy), p) + Math.pow(Math.abs(uz), p), 1 / p);
+      const bx = ux / Math.max(1e-6, normP);
+      const by = uy / Math.max(1e-6, normP);
+      const bz = uz / Math.max(1e-6, normP);
+
+      const mx = ux * 0.52 + bx * 0.48;
+      const my = uy * 0.55 + by * 0.45;
+      const mz = uz * 0.55 + bz * 0.45;
+
+      const widthTaper = 1.0 + 0.08 * my - 0.06 * my * my;
+      let x = mx * 0.285 * widthTaper;
+      let y = my * 0.275;
+      let z = mz * 0.255;
+
+      // Hơi lõm nhẹ đỉnh giữa trán giữa 2 chân sừng giống tượng mẫu
+      if (uy > 0.55) {
+        const topCenter = Math.exp(-Math.pow(ux / 0.52, 2));
+        y -= 0.018 * topCenter * ((uy - 0.55) / 0.45);
+      }
+
+      // 2 hốc mắt bầu dục dọc lõm sâu tự nhiên trên mặt trước (-Z)
+      [-1, 1].forEach(side => {
+        const da = (ang - side * 0.44) / 0.22;
+        const dp = (phi + 0.10) / 0.30;
+        const d2 = da * da + dp * dp;
+        if (d2 < 2.2) z += 0.026 * Math.exp(-d2 * 1.55);
+      });
+
+      positions.push(x, y + 1.11, z);
+      uvs.push(u, v);
+    }
+  }
+
+  for (let j = 0; j < segY; j++) {
+    for (let i = 0; i < segX; i++) {
+      const a = j * (segX + 1) + i;
+      const b = a + 1;
+      const c = a + (segX + 1);
+      const d = c + 1;
+      indices.push(a, b, d, a, d, c);
+    }
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geo.setIndex(indices);
+  geo.computeVertexNormals();
+  return geo;
+}
+
+// 2. Texture 1024x512 cho mặt nạ sứ trắng mượt & 2 hốc mắt đen sâu thẳm Hollow Knight
+function createKnightMaskTexture() {
+  const W = 1024, H = 512;
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const g = c.getContext('2d');
+
+  // Nền sứ trắng ngà hơi ánh lạnh xanh-tím rất nhẹ ở cằm giống tượng Hollow Knight
+  const grad = g.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0.0, '#fbfcff');
+  grad.addColorStop(0.58, '#f1f3f9');
+  grad.addColorStop(0.84, '#dfe5f2');
+  grad.addColorStop(1.0, '#c6cfe4');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, W, H);
+
+  // Hạt sứ cực mịn
+  for (let i = 0; i < 1400; i++) {
+    g.fillStyle = Math.random() > 0.5 ? 'rgba(255,255,255,0.08)' : 'rgba(130, 145, 185, 0.05)';
+    g.fillRect(Math.random() * W, Math.random() * H, 2, 2);
+  }
+
+  const toX = (ang) => (0.5 + ang / (Math.PI * 2)) * W;
+  const toY = (phi) => (0.5 - phi / Math.PI) * H;
+
+  // 2 mắt bầu dục dọc đen tuyền to tròn đặc trưng
+  [-0.44, 0.44].forEach(ea => {
+    const cx = toX(ea), cy = toY(-0.10);
+    // Quầng bóng nhẹ quanh viền hốc mắt tạo chiều sâu 3D
+    const rim = g.createRadialGradient(cx, cy + 4, 24, cx, cy + 4, 62);
+    rim.addColorStop(0, 'rgba(30, 35, 58, 0.45)');
+    rim.addColorStop(1, 'rgba(30, 35, 58, 0)');
+    g.fillStyle = rim;
+    g.beginPath(); g.ellipse(cx, cy + 4, 52, 64, 0, 0, Math.PI * 2); g.fill();
+
+    // Lõi mắt đen trống rỗng chuẩn Void
+    g.fillStyle = '#05060a';
+    g.beginPath();
+    g.ellipse(cx, cy, 37, 48, 0, 0, Math.PI * 2);
+    g.fill();
+
+    g.strokeStyle = '#181c2b';
+    g.lineWidth = 3.5;
+    g.stroke();
+  });
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.anisotropy = 4;
+  return tex;
+}
+
+// 3. Áo choàng Mothwing xếp nếp chéo chẻ chữ V ngược & viền rách tua rua đặc trưng
+function createKnightCloakGeometry() {
+  const segU = 48, segV = 24;
+  const positions = [], uvs = [], indices = [];
+
+  for (let j = 0; j <= segV; j++) {
+    const v = j / segV;
+    const gap = 0.04 + Math.pow(1 - v, 1.25) * 0.56;
+
+    for (let i = 0; i <= segU; i++) {
+      const u = i / segU;
+      const ang = gap + u * (Math.PI * 2 - 2 * gap);
+
+      // Các đường gân nếp vải chéo nổi 3D
+      const pleat = Math.sin(ang * 11.0 + v * 6.5) * 0.014 * (1 - 0.45 * v);
+      // Viền gấu áo rách nhọn tua rua
+      const jag = (0.042 * Math.abs(Math.sin(ang * 6.0)) + 0.018 * Math.sin(ang * 13.0)) * Math.pow(1 - v, 2.2);
+
+      const yBot = 0.21 + jag;
+      const yTop = 0.87;
+      const y = yBot + v * (yTop - yBot);
+
+      const rBase = 0.145 + Math.pow(1 - v, 0.72) * 0.195;
+      const rx = (rBase + pleat) * 1.04;
+      const rz = (rBase + pleat) * 0.94;
+      const zShift = (1 - v) * 0.035;
+
+      const x = -Math.sin(ang) * rx;
+      const z = -Math.cos(ang) * rz + zShift;
+
+      positions.push(x, y, z);
+      uvs.push(u * 2.0, v);
+    }
+  }
+
+  for (let j = 0; j < segV; j++) {
+    for (let i = 0; i < segU; i++) {
+      const a = j * (segU + 1) + i;
+      const b = a + 1;
+      const c = a + (segU + 1);
+      const d = c + 1;
+      indices.push(a, b, d, a, d, c);
+    }
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geo.setIndex(indices);
+  geo.computeVertexNormals();
+  return geo;
+}
+
+function createKnightCloakTexture() {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 256;
+  const g = c.getContext('2d');
+  const grad = g.createLinearGradient(0, 0, 0, 256);
+  grad.addColorStop(0.0, '#4f3cc9');
+  grad.addColorStop(0.45, '#372699');
+  grad.addColorStop(0.82, '#24186e');
+  grad.addColorStop(1.0, '#160f47');
+  g.fillStyle = grad; g.fillRect(0, 0, 256, 256);
+
+  // Vẽ các đường nếp gấp chéo sâu sắc giống tượng Hollow Knight
+  for (let k = -256; k < 512; k += 18) {
+    g.strokeStyle = 'rgba(130, 115, 255, 0.24)';
+    g.lineWidth = 4;
+    g.beginPath(); g.moveTo(k, 0); g.lineTo(k + 120, 256); g.stroke();
+
+    g.strokeStyle = 'rgba(10, 6, 36, 0.42)';
+    g.lineWidth = 5;
+    g.beginPath(); g.moveTo(k + 7, 0); g.lineTo(k + 127, 256); g.stroke();
+  }
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+
+function createKnightNailMesh(isSeeker) {
+  const nail = new THREE.Group();
+
+  const bladeMat = new THREE.MeshStandardMaterial({
+    color: isSeeker ? 0xeef6ff : 0xcbd5e1,
+    roughness: 0.25, metalness: 0.65,
+    emissive: isSeeker ? 0x7c5cff : 0x1e293b,
+    emissiveIntensity: isSeeker ? 0.72 : 0.14
+  });
+  const hiltMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.45, metalness: 0.5 });
+  const wrapMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.75 });
+
+  // Lưỡi đinh kiếm (Nail) bản rộng vát nhọn 4 cạnh sắc nét
+  const blade = new THREE.Mesh(new THREE.ConeGeometry(0.095, 0.78, 4), bladeMat);
+  blade.scale.set(1.0, 1.0, 0.26);
+  blade.rotation.z = Math.PI; // Mũi kiếm hướng xuống (-Y)
+  blade.position.y = -0.39;
+  nail.add(blade);
+
+  // Gờ chặn tay (crossguard) đặc trưng của Old Nail
+  const guard = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.055, 0.06), hiltMat);
+  guard.position.y = 0.02;
+  nail.add(guard);
+
+  // Chuôi kiếm quấn dây & núm chuôi
+  const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.028, 0.22, 12), wrapMat);
+  handle.position.y = 0.14;
+  nail.add(handle);
+
+  const pommel = new THREE.Mesh(new THREE.SphereGeometry(0.036, 12, 10), hiltMat);
+  pommel.position.y = 0.255;
+  nail.add(pommel);
+
+  return nail;
+}
+
+const knightMaskGeo = createSculptedKnightMaskGeometry();
+const knightMaskTex = createKnightMaskTexture();
+const knightCloakGeo = createKnightCloakGeometry();
+const knightCloakTex = createKnightCloakTexture();
+const knightSoulGlowTex = createGlowHaloTexture('#c4b5fd');
+
+// Cặp sừng cong chữ U hướng vào trong + nhánh chẻ đặc trưng ở đỉnh sừng
+const knightLeftHornMainGeo = createVariableTubeGeometry(
+  [
+    new THREE.Vector3(-0.20, 1.29, 0.00),
+    new THREE.Vector3(-0.31, 1.44, -0.01),
+    new THREE.Vector3(-0.34, 1.62, -0.015),
+    new THREE.Vector3(-0.26, 1.78, -0.015),
+    new THREE.Vector3(-0.13, 1.84, -0.01)
+  ],
+  [0.072, 0.064, 0.055, 0.042, 0.012],
+  22, 14, new THREE.Vector3(-1, 0, 0)
+);
+const knightRightHornMainGeo = createVariableTubeGeometry(
+  [
+    new THREE.Vector3(0.20, 1.29, 0.00),
+    new THREE.Vector3(0.31, 1.44, -0.01),
+    new THREE.Vector3(0.34, 1.62, -0.015),
+    new THREE.Vector3(0.26, 1.78, -0.015),
+    new THREE.Vector3(0.13, 1.84, -0.01)
+  ],
+  [0.072, 0.064, 0.055, 0.042, 0.012],
+  22, 14, new THREE.Vector3(1, 0, 0)
+);
+
+// Nhánh chẻ nhỏ ở đầu mỗi sừng tạo vết khứa kinh điển của The Knight
+const knightLeftHornSpurGeo = createVariableTubeGeometry(
+  [
+    new THREE.Vector3(-0.265, 1.76, -0.015),
+    new THREE.Vector3(-0.225, 1.82, -0.012),
+    new THREE.Vector3(-0.175, 1.865, -0.01)
+  ],
+  [0.036, 0.024, 0.009],
+  10, 10, new THREE.Vector3(-1, 0.3, 0)
+);
+const knightRightHornSpurGeo = createVariableTubeGeometry(
+  [
+    new THREE.Vector3(0.265, 1.76, -0.015),
+    new THREE.Vector3(0.225, 1.82, -0.012),
+    new THREE.Vector3(0.175, 1.865, -0.01)
+  ],
+  [0.036, 0.024, 0.009],
+  10, 10, new THREE.Vector3(1, 0.3, 0)
+);
+
+function buildKnightCharacterMesh(isSeeker = false, includeXray = false) {
+  const root = new THREE.Group();
+  const bodyGroup = new THREE.Group();
+  bodyGroup.scale.set(1.03, 1.03, 1.03);
+  root.add(bodyGroup);
+
+  const maskMat = new THREE.MeshStandardMaterial({
+    map: knightMaskTex,
+    roughness: 0.36, metalness: 0.04,
+    emissive: isSeeker ? 0x261d4d : 0x090a14,
+    emissiveIntensity: isSeeker ? 0.36 : 0.08
+  });
+  const hornMat = new THREE.MeshStandardMaterial({
+    color: 0xf4f6fb, roughness: 0.36, metalness: 0.04,
+    emissive: isSeeker ? 0x2a1f54 : 0x080912,
+    emissiveIntensity: isSeeker ? 0.32 : 0.08
+  });
+  const cloakMat = new THREE.MeshStandardMaterial({
+    map: knightCloakTex,
+    roughness: 0.68, metalness: 0.06,
+    side: THREE.DoubleSide,
+    emissive: isSeeker ? 0x3b24a8 : 0x0b0824,
+    emissiveIntensity: isSeeker ? 0.68 : 0.14
+  });
+  const voidMat = new THREE.MeshStandardMaterial({ color: 0x090a10, roughness: 0.85, metalness: 0.05 });
+
+  // 1. MẶT NẠ SỨ TRẮNG & CẶP SỪNG CONG CHẺ ĐỈNH
+  bodyGroup.add(new THREE.Mesh(knightMaskGeo, maskMat));
+  bodyGroup.add(new THREE.Mesh(knightLeftHornMainGeo, hornMat));
+  bodyGroup.add(new THREE.Mesh(knightRightHornMainGeo, hornMat));
+  bodyGroup.add(new THREE.Mesh(knightLeftHornSpurGeo, hornMat));
+  bodyGroup.add(new THREE.Mesh(knightRightHornSpurGeo, hornMat));
+
+  // 2. THÂN VOID ĐEN BÊN TRONG ÁO CHOÀNG
+  const voidTorso = new THREE.Mesh(new THREE.CylinderGeometry(0.115, 0.145, 0.56, 18), voidMat);
+  voidTorso.position.set(0, 0.55, 0.01);
+  bodyGroup.add(voidTorso);
+
+  // 3. ÁO CHOÀNG TÍM CHÀM XẾP NẾP + LỚP KHĂN VAI GẤP CHÉO
+  bodyGroup.add(new THREE.Mesh(knightCloakGeo, cloakMat));
+
+  // Lớp khăn quấn vai xếp chồng tạo độ dày 3D ngay dưới cổ
+  const scarfWrap = new THREE.Mesh(new THREE.TorusGeometry(0.168, 0.056, 14, 28), cloakMat);
+  scarfWrap.scale.set(1.06, 0.92, 0.95);
+  scarfWrap.rotation.x = Math.PI / 2 + 0.14;
+  scarfWrap.position.set(0, 0.825, 0.015);
+  bodyGroup.add(scarfWrap);
+
+  // Hai vạt áo choàng chéo bắt ngang trước ngực giống tượng mẫu
+  [-1, 1].forEach(side => {
+    const lapel = new THREE.Mesh(new THREE.SphereGeometry(0.145, 16, 12), cloakMat);
+    lapel.scale.set(0.65, 1.35, 0.45);
+    lapel.position.set(side * 0.075, 0.67, -0.145);
+    lapel.rotation.z = side * 0.46;
+    lapel.rotation.y = side * -0.25;
+    bodyGroup.add(lapel);
+  });
+
+  // 4. THANH ĐINH KIẾM (THE NAIL) ĐEO CHÉO SAU LƯNG
+  const nail = createKnightNailMesh(isSeeker);
+  nail.position.set(0.06, 0.72, 0.235);
+  nail.rotation.z = -0.78;
+  nail.rotation.x = 0.16;
+  bodyGroup.add(nail);
+
+  // 5. HAI CHÂN VOID ĐEN NHỌN NGẮN CHIBI
+  const createVoidLeg = (side) => {
+    const legGrp = new THREE.Group();
+    legGrp.position.set(side * 0.088, 0.28, 0.01);
+    const legCone = new THREE.Mesh(new THREE.ConeGeometry(0.062, 0.29, 14), voidMat);
+    legCone.rotation.x = Math.PI;
+    legCone.position.y = -0.14;
+    legGrp.add(legCone);
+    return legGrp;
+  };
+  const leftLeg = createVoidLeg(-1);
+  const rightLeg = createVoidLeg(1);
+  bodyGroup.add(leftLeg, rightLeg);
+
+  // 6. CÁC ĐOM ĐÓM LINH HỒN (SOUL MOTES) LƠ LỬNG QUANH THE KNIGHT
+  const knightSoulGroup = new THREE.Group();
+  const moteCount = isSeeker ? 6 : 4;
+  for (let i = 0; i < moteCount; i++) {
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: knightSoulGlowTex,
+      color: isSeeker ? 0xd8ccff : 0xe0f2fe,
+      transparent: true,
+      opacity: isSeeker ? 0.92 : 0.65,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    }));
+    const ang = (i / moteCount) * Math.PI * 2;
+    const rad = isSeeker ? 0.56 : 0.48;
+    const hY = 0.45 + (i % 3) * 0.42;
+    sp.position.set(Math.cos(ang) * rad, hY, Math.sin(ang) * rad);
+    const sc = isSeeker ? (0.17 + (i % 2) * 0.06) : (0.11 + (i % 2) * 0.04);
+    sp.scale.set(sc, sc, 1);
+    sp.userData = { baseAng: ang, rad, baseY: hY, phase: i * 1.4 };
+    knightSoulGroup.add(sp);
+  }
+  root.add(knightSoulGroup);
+
+  // Vòng hào quang Linh Hồn Tím-Chàm dưới chân khi The Knight làm Người Bắt
+  let seekerAuraRing = null;
+  if (isSeeker) {
+    seekerAuraRing = new THREE.Mesh(
+      new THREE.RingGeometry(0.54, 1.02, 32),
+      new THREE.MeshBasicMaterial({
+        color: 0xa78bfa, transparent: true, opacity: 0.82,
+        side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending
+      })
+    );
+    seekerAuraRing.rotation.x = -Math.PI / 2;
+    seekerAuraRing.position.y = 0.05;
+    root.add(seekerAuraRing);
+  }
+
+  let handItem = null;
+  if (!isSeeker) {
+    handItem = createFlashlightMesh(0.82);
+    handItem.position.set(0.36, 0.72, -0.18);
+    handItem.visible = false;
+    bodyGroup.add(handItem);
+  }
+
+  let xrayGroup = null;
+  if (includeXray) {
+    const xr = buildBodyParts(xraySilhouetteMat, 998);
+    xrayGroup = xr.grp;
+    xrayGroup.scale.set(1.0, 0.98, 1.0);
+    xrayGroup.visible = false;
+    bodyGroup.add(xrayGroup);
+  }
+
+  let stunEffectGroup = null;
+  if (!isSeeker) {
+    stunEffectGroup = createStunEffectGroup();
+    root.add(stunEffectGroup);
+  }
+
+  root.userData = {
+    bodyGroup,
+    leftLeg,
+    rightLeg,
+    xrayGroup,
+    handItem,
+    spinWheel: null,
+    seekerAuraRing,
+    sansEyeGlow: null,
+    knightSoulGroup,
+    stunEffectGroup
+  };
+  return root;
+}
+
+function buildCharacterMesh(skinHex, hatId, isSeeker, includeXray = false, secretChar = null) {
+  if (secretChar === 'sans' || secretChar === true) {
     return buildSansCharacterMesh(isSeeker, includeXray);
+  }
+  if (secretChar === 'knight') {
+    return buildKnightCharacterMesh(isSeeker, includeXray);
   }
 
   const root = new THREE.Group();
@@ -1607,7 +2057,7 @@ function createStunEffectGroup() {
 function disposeObject3D(obj) {
   if (!obj) return;
   obj.traverse(child => {
-    if (child.geometry && child.geometry !== gasterCraniumGeo && child.geometry !== gasterLeftHornGeo && child.geometry !== gasterRightHornGeo && child.geometry !== gasterLeftJawArmGeo && child.geometry !== gasterRightJawArmGeo) {
+    if (child.geometry && child.geometry !== gasterCraniumGeo && child.geometry !== gasterLeftHornGeo && child.geometry !== gasterRightHornGeo && child.geometry !== gasterLeftJawArmGeo && child.geometry !== gasterRightJawArmGeo && child.geometry !== knightMaskGeo && child.geometry !== knightCloakGeo && child.geometry !== knightLeftHornMainGeo && child.geometry !== knightRightHornMainGeo && child.geometry !== knightLeftHornSpurGeo && child.geometry !== knightRightHornSpurGeo) {
       child.geometry.dispose();
     }
     if (child.material) {

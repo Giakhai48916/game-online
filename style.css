@@ -738,3 +738,67 @@ input[type="range"] { width: 100%; accent-color: #e3c852; height: 24px; cursor: 
     width: 96px; height: 96px; font-size: 1.05rem;
   }
 }
+
+/* Hiệu ứng khóa phong cách Hollow Knight (Hallownest Void & Pale Soul) */
+.wardrobe-box.knight-locked-theme {
+  background: linear-gradient(155deg, #0b0918 0%, #171230 55%, #0e1326 100%);
+  border-color: #c4b5fd;
+  box-shadow: 0 0 24px rgba(139, 109, 255, 0.42), inset 0 0 18px rgba(196, 181, 253, 0.14);
+}
+
+.knight-lock-box {
+  border: 1.5px solid #e2e8f0;
+  background: radial-gradient(circle at top right, rgba(91, 66, 196, 0.28), rgba(8, 8, 18, 0.94) 70%);
+  border-radius: 8px;
+  padding: 9px 10px;
+  text-align: left;
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 0 14px rgba(167, 139, 250, 0.2);
+  animation: knightSoulIn 0.32s ease-out;
+}
+
+.knight-lock-box::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 86% 18%, rgba(224, 231, 255, 0.16), transparent 55%);
+  pointer-events: none;
+}
+
+@keyframes knightSoulIn {
+  0% { opacity: 0.4; transform: scale(0.96); filter: brightness(1.5); }
+  100% { opacity: 1; transform: scale(1); filter: brightness(1); }
+}
+
+.knight-lock-badge {
+  font-size: 0.61rem;
+  font-weight: 800;
+  letter-spacing: 1.1px;
+  color: #c4b5fd;
+  margin-bottom: 3px;
+}
+
+.knight-lock-title {
+  font-size: 1.04rem;
+  font-weight: 900;
+  letter-spacing: 2.2px;
+  color: #f8fafc;
+  text-shadow: 0 0 10px rgba(196, 181, 253, 0.95), 0 0 20px rgba(124, 58, 237, 0.7);
+  margin-bottom: 4px;
+}
+
+.knight-lock-msg {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-size: 0.74rem;
+  line-height: 1.38;
+  color: #e9e4ff;
+  margin-bottom: 5px;
+}
+
+.knight-lock-sub {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #a78bfa;
+}

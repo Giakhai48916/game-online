@@ -25,7 +25,7 @@ const PLAYER_RADIUS = 15;
 const PREP_DURATION = 15;
 const FINAL_MINUTE_SEC = 60;
 const XRAY_CYCLE_SEC = XRAY_ON_SEC + XRAY_OFF_SEC;
-const ROOM_PREFIX = 'br35v8-';
+const ROOM_PREFIX = 'br35v9-';
 
 const SKINS = [
   { id: 'white',     name: 'Trắng Gốc',      hex: 0xf1f3f8, css: '#f1f3f8' },
