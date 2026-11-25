@@ -1,7 +1,7 @@
 document.getElementById('lobby-rules-text').innerHTML =
-  `<b>Luật chơi:</b> Map 35&times;35 ngẫu nhiên. Người Bắt phát <b>ánh sáng đỏ</b> khi lại gần. Bị bắt vào <b>Lồng Giam</b> khóa cứu <b>${JAIL_LOCK_SECONDS}s</b>. Nhặt <b>🔦 Đèn Pin</b> (tối đa ${MAX_ITEMS_TOTAL} cây) chiếu làm <b>chói trắng Người Bắt ${BLIND_DURATION}s</b>. Còn <b>1 phút cuối</b>, Thấu Thị nháy <b>${XRAY_ON_SEC}s/${XRAY_OFF_SEC}s</b> và bị bắt thua ngay!`;
+  `<b>Luật chơi:</b> Map 35&times;35 ngẫu nhiên. Người Bắt có kỹ năng <b>⚡ Tăng Tốc ${SEEKER_BOOST_DURATION}s</b> (hồi ${SEEKER_BOOST_COOLDOWN}s) và phát <b>ánh sáng đỏ</b> khi lại gần. Bị bắt vào <b>Lồng Giam</b> khóa cứu <b>${JAIL_LOCK_SECONDS}s</b>. Nhặt <b>🔦 Đèn Pin</b> (tối đa ${MAX_ITEMS_TOTAL} cây) làm <b>chói trắng ${BLIND_DURATION}s</b>. Còn <b>1 phút cuối</b>: Người Bắt tăng tốc cố định, Thấu Thị nháy <b>${XRAY_ON_SEC}s/${XRAY_OFF_SEC}s</b> và bị bắt thua ngay!`;
 
-let userSettings = { touchSens: 1.0, mouseSens: 1.0, invertY: false };
+let userSettings = { touchSens: 1.0, mouseSens: 1.0, invertY: false, bgmVol: 0.40, bgmMuted: false };
 let myCosmetics = { skin: 'white', hat: 'hutao' };
 let activeSecretChar = null; // null | 'sans' | 'knight'
 
@@ -26,6 +26,10 @@ try {
     userSettings.touchSens = Math.max(0.2, Math.min(3.0, Number(savedSet.touchSens) || 1.0));
     userSettings.mouseSens = Math.max(0.2, Math.min(3.0, Number(savedSet.mouseSens) || 1.0));
     userSettings.invertY = !!savedSet.invertY;
+    if (typeof savedSet.bgmVol === 'number' && !Number.isNaN(savedSet.bgmVol)) {
+      userSettings.bgmVol = Math.max(0, Math.min(1, savedSet.bgmVol));
+    }
+    userSettings.bgmMuted = !!savedSet.bgmMuted;
   }
   const savedCos = JSON.parse(localStorage.getItem('br3d_cosmetics') || 'null');
   if (savedCos) {
@@ -97,12 +101,9 @@ function playHollowKnightSoulChime() {
   } catch (e) {}
 }
 
-// Âm thanh Gaster Blaster chuẩn (gaster-blaster-sound-effect.mp3) hỗ trợ tải trước & phát mượt trên PC / Mobile / iPad
+// Hệ thống âm thanh kỹ năng chuẩn (Sans: gaster-blaster-sound-effect.mp3 & Knight: hero_fireball.wav)
+// Hỗ trợ tải trước (preload) & phát mượt trên PC / Mobile / iPad
 let sharedAudioCtx = null;
-let gasterBlasterAudioBuf = null;
-let gasterBlasterRawBytes = null;
-let gasterBlasterFetchStarted = false;
-let gasterBlasterDecoding = false;
 
 function getSharedAudioCtx() {
   const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -112,72 +113,151 @@ function getSharedAudioCtx() {
   return sharedAudioCtx;
 }
 
-function decodeGasterBlasterIfReady() {
-  if (gasterBlasterAudioBuf || gasterBlasterDecoding || !gasterBlasterRawBytes) return;
-  const ctx = getSharedAudioCtx();
-  if (!ctx) return;
-  gasterBlasterDecoding = true;
-  const copy = gasterBlasterRawBytes.slice(0);
-  new Promise((resolve, reject) => {
-    const p = ctx.decodeAudioData(copy, resolve, reject);
-    if (p && typeof p.then === 'function') p.then(resolve).catch(reject);
-  })
-    .then(buf => { if (buf) gasterBlasterAudioBuf = buf; })
-    .catch(() => {})
-    .finally(() => { gasterBlasterDecoding = false; });
+function createPreloadedSound(url) {
+  const s = { url, buf: null, raw: null, fetching: false, decoding: false };
+  const decodeIfReady = () => {
+    if (s.buf || s.decoding || !s.raw) return;
+    const ctx = getSharedAudioCtx();
+    if (!ctx) return;
+    s.decoding = true;
+    const copy = s.raw.slice(0);
+    new Promise((resolve, reject) => {
+      const p = ctx.decodeAudioData(copy, resolve, reject);
+      if (p && typeof p.then === 'function') p.then(resolve).catch(reject);
+    })
+      .then(buf => { if (buf) s.buf = buf; })
+      .catch(() => {})
+      .finally(() => { s.decoding = false; });
+  };
+  return {
+    preload() {
+      if (s.buf) return;
+      if (s.raw) { decodeIfReady(); return; }
+      if (s.fetching) return;
+      s.fetching = true;
+      fetch(s.url)
+        .then(res => {
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          return res.arrayBuffer();
+        })
+        .then(arr => {
+          s.raw = arr;
+          decodeIfReady();
+        })
+        .catch(() => { s.fetching = false; });
+    },
+    play(volume = 0.95) {
+      const vol = Math.max(0.22, Math.min(1.0, volume));
+      try {
+        const ctx = getSharedAudioCtx();
+        if (ctx && s.buf) {
+          if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+          const src = ctx.createBufferSource();
+          const gain = ctx.createGain();
+          src.buffer = s.buf;
+          gain.gain.setValueAtTime(vol, ctx.currentTime);
+          src.connect(gain);
+          gain.connect(ctx.destination);
+          src.start(0);
+          return;
+        }
+      } catch (e) {}
+
+      try {
+        const audio = new Audio(s.url);
+        audio.volume = vol;
+        audio.currentTime = 0;
+        const p = audio.play();
+        if (p && typeof p.catch === 'function') p.catch(() => {});
+      } catch (e) {}
+    }
+  };
 }
 
-function preloadGasterBlasterAudio() {
-  if (gasterBlasterAudioBuf) return;
-  if (gasterBlasterRawBytes) { decodeGasterBlasterIfReady(); return; }
-  if (gasterBlasterFetchStarted) return;
-  gasterBlasterFetchStarted = true;
-  fetch('./gaster-blaster-sound-effect.mp3')
-    .then(res => {
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return res.arrayBuffer();
-    })
-    .then(arr => {
-      gasterBlasterRawBytes = arr;
-      decodeGasterBlasterIfReady();
-    })
-    .catch(() => { gasterBlasterFetchStarted = false; });
+const gasterBlasterSfx = createPreloadedSound('./gaster-blaster-sound-effect.mp3');
+const shadeSoulSfx = createPreloadedSound('./hero_fireball.wav');
+
+function preloadSkillAudios() {
+  gasterBlasterSfx.preload();
+  shadeSoulSfx.preload();
+}
+
+// Nhạc nền chơi game (TEMPOREX - Numbers loop -> bgm.mp3)
+const gameBgmAudio = new Audio('./bgm.mp3');
+gameBgmAudio.loop = true;
+gameBgmAudio.preload = 'auto';
+let gameBgmShouldPlay = false;
+
+function applyBgmVolume() {
+  const effectiveVol = userSettings.bgmMuted ? 0 : Math.max(0, Math.min(1, userSettings.bgmVol));
+  gameBgmAudio.volume = effectiveVol;
+  const btnBgm = document.getElementById('btn-hud-bgm');
+  if (btnBgm) {
+    btnBgm.textContent = (userSettings.bgmMuted || userSettings.bgmVol <= 0.001) ? '🔇' : '🎵';
+  }
+}
+
+function startGameBgm(restart = false) {
+  gameBgmShouldPlay = true;
+  applyBgmVolume();
+  if (restart) {
+    try { gameBgmAudio.currentTime = 0; } catch (e) {}
+  }
+  if (userSettings.bgmMuted || userSettings.bgmVol <= 0.001) return;
+  try {
+    const p = gameBgmAudio.play();
+    if (p && typeof p.catch === 'function') p.catch(() => {});
+  } catch (e) {}
+}
+
+function stopGameBgm() {
+  gameBgmShouldPlay = false;
+  try {
+    gameBgmAudio.pause();
+    gameBgmAudio.currentTime = 0;
+  } catch (e) {}
+}
+
+function playSpeedBoostSound() {
+  try {
+    const ctx = getSharedAudioCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(220, now);
+    osc.frequency.exponentialRampToValueAtTime(760, now + 0.28);
+    const flt = ctx.createBiquadFilter();
+    flt.type = 'lowpass';
+    flt.frequency.setValueAtTime(1400, now);
+    gain.gain.setValueAtTime(0.01, now);
+    gain.gain.linearRampToValueAtTime(0.11, now + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.34);
+    osc.connect(flt); flt.connect(gain); gain.connect(ctx.destination);
+    osc.start(now); osc.stop(now + 0.36);
+  } catch (e) {}
 }
 
 function unlockGameAudio() {
   const ctx = getSharedAudioCtx();
   if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
-  preloadGasterBlasterAudio();
+  preloadSkillAudios();
+  if (gameBgmShouldPlay && gameBgmAudio.paused && !userSettings.bgmMuted && userSettings.bgmVol > 0.001) {
+    applyBgmVolume();
+    try {
+      const p = gameBgmAudio.play();
+      if (p && typeof p.catch === 'function') p.catch(() => {});
+    } catch (e) {}
+  }
 }
 ['pointerdown', 'touchstart', 'keydown'].forEach(ev => {
   window.addEventListener(ev, unlockGameAudio, { passive: true });
 });
-preloadGasterBlasterAudio();
+preloadSkillAudios();
 
 function playGasterBlasterSound(volume = 0.95) {
-  const vol = Math.max(0.22, Math.min(1.0, volume));
-  try {
-    const ctx = getSharedAudioCtx();
-    if (ctx && gasterBlasterAudioBuf) {
-      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
-      const src = ctx.createBufferSource();
-      const gain = ctx.createGain();
-      src.buffer = gasterBlasterAudioBuf;
-      gain.gain.setValueAtTime(vol, ctx.currentTime);
-      src.connect(gain);
-      gain.connect(ctx.destination);
-      src.start(0);
-      return;
-    }
-  } catch (e) {}
-
-  try {
-    const audio = new Audio('./gaster-blaster-sound-effect.mp3');
-    audio.volume = vol;
-    audio.currentTime = 0;
-    const p = audio.play();
-    if (p && typeof p.catch === 'function') p.catch(() => {});
-  } catch (e) {}
+  gasterBlasterSfx.play(volume);
 }
 
 function playStunHitSound() {
@@ -197,6 +277,11 @@ function playStunHitSound() {
     osc.start(now); osc.stop(now + 0.32);
     setTimeout(() => ctx.close().catch(() => {}), 450);
   } catch (e) {}
+}
+
+// Âm thanh Shade Soul gốc của The Knight (hero_fireball.wav)
+function playShadeSoulSound(volume = 0.95) {
+  shadeSoulSfx.play(volume);
 }
 
 function createPreviewBox(canvasId, w, h) {
@@ -324,6 +409,8 @@ const sliderTouchSens = document.getElementById('slider-touch-sens');
 const sliderMouseSens = document.getElementById('slider-mouse-sens');
 const valTouchSens = document.getElementById('val-touch-sens');
 const valMouseSens = document.getElementById('val-mouse-sens');
+const sliderBgmVol = document.getElementById('slider-bgm-vol');
+const valBgmVol = document.getElementById('val-bgm-vol');
 const chkInvertY = document.getElementById('chk-invert-y');
 
 function syncSettingsUI() {
@@ -331,7 +418,10 @@ function syncSettingsUI() {
   sliderMouseSens.value = userSettings.mouseSens;
   valTouchSens.textContent = userSettings.touchSens.toFixed(2) + 'x';
   valMouseSens.textContent = userSettings.mouseSens.toFixed(2) + 'x';
+  if (sliderBgmVol) sliderBgmVol.value = userSettings.bgmVol;
+  if (valBgmVol) valBgmVol.textContent = Math.round(userSettings.bgmVol * 100) + '%';
   chkInvertY.checked = userSettings.invertY;
+  applyBgmVolume();
 }
 syncSettingsUI();
 
@@ -364,6 +454,29 @@ sliderMouseSens.addEventListener('input', () => {
   persistSettings();
 });
 chkInvertY.addEventListener('change', () => { userSettings.invertY = chkInvertY.checked; persistSettings(); });
+if (sliderBgmVol) {
+  sliderBgmVol.addEventListener('input', () => {
+    userSettings.bgmVol = Number(sliderBgmVol.value);
+    if (userSettings.bgmVol > 0) userSettings.bgmMuted = false;
+    if (valBgmVol) valBgmVol.textContent = Math.round(userSettings.bgmVol * 100) + '%';
+    applyBgmVolume();
+    if (gameBgmShouldPlay && gameBgmAudio.paused && userSettings.bgmVol > 0) startGameBgm(false);
+    else if (userSettings.bgmVol <= 0.001) { try { gameBgmAudio.pause(); } catch (e) {} }
+    persistSettings();
+  });
+}
+const btnHudBgm = document.getElementById('btn-hud-bgm');
+if (btnHudBgm) {
+  btnHudBgm.addEventListener('click', (e) => {
+    e.stopPropagation();
+    userSettings.bgmMuted = !userSettings.bgmMuted;
+    if (!userSettings.bgmMuted && userSettings.bgmVol <= 0.001) userSettings.bgmVol = 0.40;
+    applyBgmVolume();
+    if (userSettings.bgmMuted) { try { gameBgmAudio.pause(); } catch (err) {} }
+    else if (gameBgmShouldPlay) startGameBgm(false);
+    persistSettings();
+  });
+}
 
 document.querySelectorAll('.preset-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -374,7 +487,7 @@ document.querySelectorAll('.preset-btn').forEach(btn => {
 });
 
 document.getElementById('btn-reset-settings').addEventListener('click', () => {
-  userSettings = { touchSens: 1.0, mouseSens: 1.0, invertY: false };
+  userSettings = { touchSens: 1.0, mouseSens: 1.0, invertY: false, bgmVol: 0.40, bgmMuted: false };
   syncSettingsUI(); persistSettings();
 });
 document.getElementById('btn-close-settings').addEventListener('click', closeSettingsModal);
@@ -754,7 +867,7 @@ function rebuildBackroomsWorld3D(grid) {
   rebuildMinimapBase(grid);
 }
 
-const groundItemMeshes = {}, activeFlashBeams = [], activeBlasters3D = [], playerMeshes = {};
+const groundItemMeshes = {}, activeFlashBeams = [], activeBlasters3D = [], activeShadeSouls3D = [], activeVoidBursts3D = [], playerMeshes = {};
 
 function createGroundItemMesh() {
   const grp = new THREE.Group();
@@ -809,6 +922,47 @@ function spawnGasterBlaster3D(x, y, yaw, beamDist, chargeSec, beamSec) {
   });
 }
 
+function spawnShadeSoul3D(x, y, yaw, range, speed) {
+  const r = range || SHADE_SOUL_RANGE;
+  const spd = speed || SHADE_SOUL_SPEED;
+
+  // 1. Hiệu ứng vòng nổ Hư Không đen-tím tại điểm phóng (giống ảnh mẫu)
+  const burstMesh = createShadeSoulBurstMesh();
+  burstMesh.position.set(x * WORLD_SCALE, 1.48, y * WORLD_SCALE);
+  burstMesh.rotation.y = yaw;
+  burstMesh.scale.set(0.35, 0.35, 0.35);
+  scene.add(burstMesh);
+  activeVoidBursts3D.push({ mesh: burstMesh, elapsed: 0, duration: 0.42 });
+
+  // 2. Tinh linh Hư Không Shade Soul lao thẳng siêu xa xuyên tường
+  const mesh = createShadeSoulMesh();
+  mesh.position.set(x * WORLD_SCALE, 1.48, y * WORLD_SCALE);
+  mesh.rotation.y = yaw;
+  mesh.scale.set(0.45, 0.45, 0.45);
+  scene.add(mesh);
+
+  // Tính âm lượng theo khoảng cách gần nhất tới đường bay Shade Soul
+  let vol = 0.96;
+  if (localPlayer.initialized) {
+    const dStart = Math.hypot(localPlayer.x - x, localPlayer.y - y);
+    const dLine = distPointToBeam(localPlayer.x, localPlayer.y, x, y, yaw, r);
+    const nearest = Math.min(dStart, dLine);
+    vol = Math.max(0.32, Math.min(1.0, 1.0 - (nearest / 1450) * 0.68));
+  }
+  playShadeSoulSound(vol);
+
+  activeShadeSouls3D.push({
+    mesh,
+    startX: x,
+    startY: y,
+    yaw,
+    traveled: 0,
+    range: r,
+    speed: spd,
+    elapsed: 0
+  });
+}
+
 function syncPlayerMesh3D(p) {
   const existing = playerMeshes[p.id];
   const secChar = p.secretChar || (p.sansActive ? 'sans' : (p.knightActive ? 'knight' : null));
@@ -823,17 +977,19 @@ function syncPlayerMesh3D(p) {
   const lockSec = p.status === 'jailed' ? Math.ceil(p.lockTimer || 0) : 0;
   const blindSec = p.blindTimer > 0 ? Math.ceil(p.blindTimer) : 0;
   const stunSec = p.stunTimer > 0 ? Math.ceil(p.stunTimer) : 0;
-  const tagKey = `${p.status}|${lockSec}|${blindSec}|${stunSec}|${p.grace ? 1 : 0}|${secChar || ''}`;
+  const tagKey = `${p.status}|${lockSec}|${blindSec}|${stunSec}|${p.stunSource || ''}|${p.grace ? 1 : 0}|${secChar || ''}`;
   if (entry.tagKey !== tagKey) {
     entry.tagKey = tagKey;
     if (entry.nameTag) { entry.mesh.remove(entry.nameTag); disposeNameTag(entry.nameTag); }
     let label = p.name, color = '#ffffff';
+    const stunCol = p.stunSource === 'knight' ? '#c4b5fd' : '#38bdf8';
     if (p.role === 'seeker') {
-      label = blindSec > 0 ? `[⚡ CHÓI ${blindSec}s] ${p.name}` : `[BẮT] ${p.name}`;
-      color = blindSec > 0 ? '#fde047' : (secChar === 'sans' ? '#38bdf8' : (secChar === 'knight' ? '#c4b5fd' : '#ff6b6b'));
+      if (stunSec > 0) { label = `[⚡ CHOÁNG ${stunSec}s] ${p.name}`; color = stunCol; }
+      else if (blindSec > 0) { label = `[⚡ CHÓI ${blindSec}s] ${p.name}`; color = '#fde047'; }
+      else { label = `[BẮT] ${p.name}`; color = (secChar === 'sans' ? '#38bdf8' : (secChar === 'knight' ? '#c4b5fd' : '#ff6b6b')); }
     }
     else if (p.status === 'jailed') { label = lockSec > 0 ? `[KHÓA ${lockSec}s] ${p.name}` : `[CỨU ĐƯỢC!] ${p.name}`; color = lockSec > 0 ? '#ff9f1c' : '#4ade80'; }
-    else if (stunSec > 0) { label = `[⚡ CHOÁNG ${stunSec}s] ${p.name}`; color = '#38bdf8'; }
+    else if (stunSec > 0) { label = `[⚡ CHOÁNG ${stunSec}s] ${p.name}`; color = stunCol; }
     else if (p.grace) { label = `[MIỄN NHIỄM] ${p.name}`; color = '#38bdf8'; }
     entry.nameTag = createNameTagSprite(label, color); entry.nameTag.visible = false; entry.mesh.add(entry.nameTag);
   }
@@ -877,20 +1033,27 @@ const hudXrayBadge = document.getElementById('hud-xray-badge');
 const blindOverlay = document.getElementById('blind-overlay');
 const blindCountdown = document.getElementById('blind-countdown');
 const hudBlasterBadge = document.getElementById('hud-blaster-badge');
+const hudShadeBadge = document.getElementById('hud-shade-badge');
+const hudBoostBadge = document.getElementById('hud-boost-badge');
 const stunOverlay = document.getElementById('stun-overlay');
 const stunCountdown = document.getElementById('stun-countdown');
 const caughtVignette = document.getElementById('caught-vignette');
 const xrayVignette = document.getElementById('xray-vignette');
+const boostVignette = document.getElementById('boost-vignette');
 const pcLockHint = document.getElementById('pc-lock-hint');
 const mobileSwipeTip = document.getElementById('mobile-swipe-tip');
 const toastContainer = document.getElementById('toast-container');
 const rescuePrompt = document.getElementById('rescue-prompt');
 const flashPrompt = document.getElementById('flash-prompt');
 const blasterPrompt = document.getElementById('blaster-prompt');
+const shadePrompt = document.getElementById('shade-prompt');
+const boostPrompt = document.getElementById('boost-prompt');
 const mobileControls = document.getElementById('mobile-controls');
 const btnMobileRescue = document.getElementById('btn-mobile-rescue');
 const btnMobileFlash = document.getElementById('btn-mobile-flash');
 const btnMobileBlaster = document.getElementById('btn-mobile-blaster');
+const btnMobileShade = document.getElementById('btn-mobile-shade');
+const btnMobileBoost = document.getElementById('btn-mobile-boost');
 const endOverlay = document.getElementById('end-overlay');
 const endPersonalTitle = document.getElementById('end-personal-title');
 const endPersonalSub = document.getElementById('end-personal-sub');
@@ -939,7 +1102,7 @@ function createPlayerObj(id, name, cosmetics, isBot = false) {
     sansActive: false, knightActive: false, secretChar: null, isBot,
     x: (CENTER_TILE + 0.5) * TILE_SIZE, y: (CENTER_TILE + 0.5) * TILE_SIZE,
     yaw: 0, tpSeq: 0, role: 'hider', status: 'alive',
-    lockTimer: 0, graceTimer: 0, blindTimer: 0, stunTimer: 0, blasterCooldown: 0, hasItem: false,
+    lockTimer: 0, graceTimer: 0, blindTimer: 0, stunTimer: 0, stunSource: 'sans', blasterCooldown: 0, shadeCooldown: 0, boostTimer: 0, boostCooldown: 0, hasItem: false,
     input: { dx: 0, dy: 0 }, moving: false, botDir: { dx: 0, dy: 0 }, botThink: 0
   };
 }
@@ -1118,7 +1281,8 @@ function hostHandleBlaster(playerId, msg) {
   if (!hostRoom || hostRoom.phase !== 'playing') return;
   if (msg) hostAcceptGuestPos(playerId, msg);
   const p = hostRoom.players[playerId];
-  if (!p || p.role !== 'seeker' || !p.sansActive || p.blasterCooldown > 0) return;
+  const canCastRole = p && (p.role === 'seeker' || (p.role === 'hider' && p.status === 'alive'));
+  if (!canCastRole || !p.sansActive || p.blasterCooldown > 0 || p.stunTimer > 0) return;
 
   p.blasterCooldown = BLASTER_COOLDOWN;
   const nearWall = castRayToWall(p.x, p.y, p.yaw, 46);
@@ -1130,6 +1294,8 @@ function hostHandleBlaster(playerId, msg) {
 
   if (!hostRoom.activeBlasters) hostRoom.activeBlasters = [];
   hostRoom.activeBlasters.push({
+    casterId: p.id,
+    casterRole: p.role,
     x: bx, y: by, yaw: p.yaw, beamDist,
     elapsed: 0,
     chargeSec: BLASTER_CHARGE_SEC,
@@ -1145,6 +1311,65 @@ function hostHandleBlaster(playerId, msg) {
     beamDist: Math.round(beamDist),
     chargeSec: BLASTER_CHARGE_SEC,
     beamSec: BLASTER_BEAM_SEC
+  });
+}
+
+function hostHandleShadeSoul(playerId, msg) {
+  if (!hostRoom || hostRoom.phase !== 'playing') return;
+  if (msg) hostAcceptGuestPos(playerId, msg);
+  const p = hostRoom.players[playerId];
+  const canCastRole = p && (p.role === 'seeker' || (p.role === 'hider' && p.status === 'alive'));
+  if (!canCastRole || !p.knightActive || p.shadeCooldown > 0 || p.stunTimer > 0) return;
+
+  p.shadeCooldown = SHADE_SOUL_COOLDOWN;
+  const fx = -Math.sin(p.yaw), fy = -Math.cos(p.yaw);
+  const sx = p.x + fx * 22;
+  const sy = p.y + fy * 22;
+
+  if (!hostRoom.activeShadeSouls) hostRoom.activeShadeSouls = [];
+  hostRoom.activeShadeSouls.push({
+    casterId: p.id,
+    casterRole: p.role,
+    x: sx, y: sy, yaw: p.yaw,
+    fx, fy,
+    traveled: 0,
+    range: SHADE_SOUL_RANGE,
+    speed: SHADE_SOUL_SPEED,
+    hitIds: new Set()
+  });
+
+  hostBroadcast({
+    type: 'shadeSoulEffect',
+    x: Math.round(sx * 10) / 10,
+    y: Math.round(sy * 10) / 10,
+    yaw: Number(p.yaw.toFixed(3)),
+    range: SHADE_SOUL_RANGE,
+    speed: SHADE_SOUL_SPEED
+  });
+}
+
+function getSeekerMoveSpeed(seekerObj, inFinalMin) {
+  if (inFinalMin) return SEEKER_FINAL_SPEED;
+  const isHidden = !!(seekerObj && (seekerObj.secretChar || seekerObj.sansActive || seekerObj.knightActive));
+  if (seekerObj && !isHidden && seekerObj.boostTimer > 0) return SEEKER_BOOST_SPEED;
+  return SEEKER_SPEED;
+}
+
+function hostHandleSeekerBoost(playerId, msg) {
+  if (!hostRoom || hostRoom.phase !== 'playing') return;
+  if (hostRoom.timer <= FINAL_MINUTE_SEC) return; // Vào 1 phút cuối đã xóa kỹ năng tăng tốc
+  if (msg) hostAcceptGuestPos(playerId, msg);
+  const p = hostRoom.players[playerId];
+  const isHidden = !!(p && (p.secretChar || p.sansActive || p.knightActive));
+  if (!p || p.role !== 'seeker' || isHidden || p.boostCooldown > 0 || p.boostTimer > 0 || p.stunTimer > 0) return;
+
+  p.boostTimer = SEEKER_BOOST_DURATION;
+  p.boostCooldown = SEEKER_BOOST_COOLDOWN;
+  hostSendTo(playerId, { type: 'boostSound' });
+  hostBroadcast({
+    type: 'toast',
+    message: `⚡ Người Bắt ${p.name} kích hoạt TĂNG TỐC trong ${SEEKER_BOOST_DURATION} giây!`,
+    style: 'warning'
   });
 }
 
@@ -1165,7 +1390,12 @@ function updateBotAI(bot, players, seeker, dt, xrayOn) {
         if (d < bestD && d < visionRange && (xrayOn || hasLineOfSight(bot.x, bot.y, p.x, p.y))) { bestD = d; target = p; }
       }
     });
-    if (target) bot.input = { dx: (target.x - bot.x) / (bestD || 1), dy: (target.y - bot.y) / (bestD || 1) };
+    if (target) {
+      bot.input = { dx: (target.x - bot.x) / (bestD || 1), dy: (target.y - bot.y) / (bestD || 1) };
+      if (hostRoom.timer > FINAL_MINUTE_SEC && bot.boostCooldown <= 0 && bot.boostTimer <= 0 && bestD > 90 && bestD < 360) {
+        hostHandleSeekerBoost(bot.id, null);
+      }
+    }
     else if (bot.botThink <= 0) {
       bot.botThink = 1.0 + Math.random(); const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
       bot.botDir = { dx: dirs[Math.floor(Math.random() * 4)][0], dy: dirs[Math.floor(Math.random() * 4)][1] };
@@ -1216,7 +1446,8 @@ function startHostGameLoop() {
     } else if (hostRoom.phase === 'playing') {
       if (hostRoom.timer <= FINAL_MINUTE_SEC && !hostRoom.finalMinuteAlerted) {
         hostRoom.finalMinuteAlerted = true;
-        hostBroadcast({ type: 'toast', message: `👁️ 1 PHÚT CUỐI! Đôi Mắt Thấu Thị nháy ${XRAY_ON_SEC}s mỗi ${XRAY_OFF_SEC}s!`, style: 'danger' });
+        Object.values(hostRoom.players).forEach(pl => { pl.boostTimer = 0; });
+        hostBroadcast({ type: 'toast', message: `👁️ 1 PHÚT CUỐI! Người Bắt tăng tốc cố định & Đôi Mắt Thấu Thị nháy ${XRAY_ON_SEC}s/${XRAY_OFF_SEC}s!`, style: 'danger' });
       }
       if (hostRoom.timer <= 0) { hostRoom.timer = 0; hostFinalizeMatch('⏱️ HẾT GIỜ! Những Người Chạy còn sống sót đã chiến thắng!', false); return; }
     }
@@ -1235,16 +1466,20 @@ function startHostGameLoop() {
       if (p.blindTimer > 0) p.blindTimer = Math.max(0, p.blindTimer - DT);
       if (p.stunTimer > 0) p.stunTimer = Math.max(0, p.stunTimer - DT);
       if (p.blasterCooldown > 0) p.blasterCooldown = Math.max(0, p.blasterCooldown - DT);
+      if (p.shadeCooldown > 0) p.shadeCooldown = Math.max(0, p.shadeCooldown - DT);
+      if (inFinalMin) { p.boostTimer = 0; }
+      else if (p.boostTimer > 0) { p.boostTimer = Math.max(0, p.boostTimer - DT); }
+      if (p.boostCooldown > 0) p.boostCooldown = Math.max(0, p.boostCooldown - DT);
       if (p.status === 'jailed' && p.lockTimer > 0) {
         const prev = Math.ceil(p.lockTimer); p.lockTimer = Math.max(0, p.lockTimer - DT);
         if (prev > 0 && p.lockTimer === 0) hostBroadcast({ type: 'toast', message: `🔓 ${p.name} đã hết ${JAIL_LOCK_SECONDS}s khóa! Có thể CỨU!`, style: 'success' });
       }
       if (p.isBot && (p.status === 'alive' || p.status === 'seeking')) {
         const px = p.x, py = p.y; updateBotAI(p, players, seeker, DT, pulseOn);
-        moveWithCollision(p, p.input.dx * (p.role === 'seeker' ? SEEKER_SPEED : HIDER_SPEED), p.input.dy * (p.role === 'seeker' ? SEEKER_SPEED : HIDER_SPEED), DT, hostRoom.phase);
+        const botSpd = p.role === 'seeker' ? getSeekerMoveSpeed(p, inFinalMin) : HIDER_SPEED; moveWithCollision(p, p.input.dx * botSpd, p.input.dy * botSpd, DT, hostRoom.phase);
         p.moving = Math.hypot(p.x - px, p.y - py) > 0.5;
       }
-      if (p.role === 'hider' && p.status === 'alive' && !p.hasItem) {
+      if (p.role === 'hider' && p.status === 'alive' && !p.hasItem && !p.secretChar) {
         for (let i = hostRoom.items.length - 1; i >= 0; i--) {
           const it = hostRoom.items[i];
           if (Math.hypot(p.x - it.x, p.y - it.y) < 36) {
@@ -1255,7 +1490,7 @@ function startHostGameLoop() {
       }
     }
 
-    if (hostRoom.phase === 'playing' && seeker && seeker.blindTimer <= 0) {
+    if (hostRoom.phase === 'playing' && seeker && seeker.blindTimer <= 0 && seeker.stunTimer <= 0) {
       for (const h of players) {
         if (h.role === 'hider' && h.status === 'alive' && h.graceTimer <= 0 && Math.hypot(seeker.x - h.x, seeker.y - h.y) < PLAYER_RADIUS * 2.25) {
           h.stunTimer = 0;
@@ -1273,25 +1508,32 @@ function startHostGameLoop() {
       }
     }
 
-    // Xử lý va chạm tia Gaster Blaster của Sans (gây choáng đứng im 5s)
+    // Xử lý va chạm tia Gaster Blaster của Sans (cả 2 phe, xuyên tường, choáng đứng im 5s)
     if (hostRoom.phase === 'playing' && hostRoom.activeBlasters && hostRoom.activeBlasters.length > 0) {
       for (let bi = hostRoom.activeBlasters.length - 1; bi >= 0; bi--) {
         const b = hostRoom.activeBlasters[bi];
         b.elapsed += DT;
         if (b.elapsed >= b.chargeSec && b.elapsed <= b.chargeSec + b.beamSec) {
-          for (const h of players) {
-            if (h.role === 'hider' && h.status === 'alive' && h.graceTimer <= 0 && !b.hitIds.has(h.id)) {
-              const dBeam = distPointToBeam(h.x, h.y, b.x, b.y, b.yaw, b.beamDist);
+          for (const target of players) {
+            if (target.id === b.casterId || b.hitIds.has(target.id)) continue;
+            const validTarget = (b.casterRole === 'seeker')
+              ? (target.role === 'hider' && target.status === 'alive' && target.graceTimer <= 0)
+              : (target.role === 'seeker');
+            if (validTarget) {
+              const dBeam = distPointToBeam(target.x, target.y, b.x, b.y, b.yaw, b.beamDist);
               if (dBeam <= BLASTER_HIT_WIDTH + PLAYER_RADIUS) {
-                b.hitIds.add(h.id);
-                h.stunTimer = BLASTER_STUN_DURATION;
-                h.moving = false;
-                h.tpSeq++;
-                hostSendTo(h.id, { type: 'stunnedSound' });
+                b.hitIds.add(target.id);
+                target.stunTimer = BLASTER_STUN_DURATION;
+                target.stunSource = 'sans';
+                target.moving = false;
+                target.tpSeq++;
+                hostSendTo(target.id, { type: 'stunnedSound' });
                 hostBroadcast({
                   type: 'toast',
-                  message: `⚡ ${h.name} trúng tia năng lượng và bị CHOÁNG đứng im ${BLASTER_STUN_DURATION} giây!`,
-                  style: 'danger'
+                  message: target.role === 'seeker'
+                    ? `⚡ Người Bắt ${target.name} trúng tia năng lượng và bị CHOÁNG đứng im ${BLASTER_STUN_DURATION} giây!`
+                    : `⚡ ${target.name} trúng tia năng lượng và bị CHOÁNG đứng im ${BLASTER_STUN_DURATION} giây!`,
+                  style: target.role === 'seeker' ? 'success' : 'danger'
                 });
               }
             }
@@ -1299,6 +1541,47 @@ function startHostGameLoop() {
         }
         if (b.elapsed >= b.chargeSec + b.beamSec + 0.35) {
           hostRoom.activeBlasters.splice(bi, 1);
+        }
+      }
+    }
+
+    // Xử lý va chạm Shade Soul của The Knight (cả 2 phe, siêu xa xuyên tường, choáng đứng im 5s)
+    if (hostRoom.phase === 'playing' && hostRoom.activeShadeSouls && hostRoom.activeShadeSouls.length > 0) {
+      for (let si = hostRoom.activeShadeSouls.length - 1; si >= 0; si--) {
+        const s = hostRoom.activeShadeSouls[si];
+        const stepDist = Math.min(s.speed * DT, s.range - s.traveled);
+        const prevX = s.x, prevY = s.y;
+        s.x += s.fx * stepDist;
+        s.y += s.fy * stepDist;
+        s.traveled += stepDist;
+
+        for (const target of players) {
+          if (target.id === s.casterId || s.hitIds.has(target.id)) continue;
+          const validTarget = (s.casterRole === 'seeker')
+            ? (target.role === 'hider' && target.status === 'alive' && target.graceTimer <= 0)
+            : (target.role === 'seeker');
+          if (validTarget) {
+            const dSeg = distPointToBeam(target.x, target.y, prevX, prevY, s.yaw, Math.max(1, stepDist));
+            if (dSeg <= SHADE_SOUL_HIT_RADIUS + PLAYER_RADIUS) {
+              s.hitIds.add(target.id);
+              target.stunTimer = SHADE_SOUL_STUN_DURATION;
+              target.stunSource = 'knight';
+              target.moving = false;
+              target.tpSeq++;
+              hostSendTo(target.id, { type: 'stunnedSound' });
+              hostBroadcast({
+                type: 'toast',
+                message: target.role === 'seeker'
+                  ? `🌑 Người Bắt ${target.name} trúng Shade Soul và bị CHOÁNG đứng im ${SHADE_SOUL_STUN_DURATION} giây!`
+                  : `🌑 ${target.name} trúng Shade Soul và bị CHOÁNG đứng im ${SHADE_SOUL_STUN_DURATION} giây!`,
+                style: target.role === 'seeker' ? 'success' : 'danger'
+              });
+            }
+          }
+        }
+
+        if (s.traveled >= s.range) {
+          hostRoom.activeShadeSouls.splice(si, 1);
         }
       }
     }
@@ -1312,7 +1595,11 @@ function startHostGameLoop() {
         tpSeq: p.tpSeq, role: p.role, status: p.status, lockTimer: Math.ceil(p.lockTimer),
         blindTimer: Number(p.blindTimer.toFixed(1)),
         stunTimer: Number(p.stunTimer.toFixed(1)),
+        stunSource: p.stunSource || 'sans',
         blasterCd: Math.ceil(p.blasterCooldown),
+        shadeCd: Math.ceil(p.shadeCooldown),
+        boostTimer: Number(p.boostTimer.toFixed(1)),
+        boostCd: Math.ceil(p.boostCooldown),
         hasItem: p.hasItem, grace: p.graceTimer > 0, moving: p.moving
       }))
     });
@@ -1324,7 +1611,8 @@ function handleClientPacket(data) {
   if (data.type === 'lobbyUpdate') {
     gamePhase = data.phase; currentRoomCode = data.code; configuredDuration = data.matchDuration || 180;
     lobbyCodeEl.textContent = data.code; durationDisplay.textContent = formatClock(configuredDuration);
-    endOverlay.classList.add('hidden'); blindOverlay.style.opacity = '0'; stunOverlay.classList.add('hidden'); seekerRedLight.visible = false; stunOverlay.classList.add('hidden');
+    endOverlay.classList.add('hidden'); blindOverlay.style.opacity = '0'; stunOverlay.classList.add('hidden'); boostVignette.classList.add('hidden'); seekerRedLight.visible = false;
+    stopGameBgm();
     showScreen(lobbyScreen);
 
     const meLobby = data.players.find(p => p.id === myId);
@@ -1339,10 +1627,11 @@ function handleClientPacket(data) {
     data.players.forEach(p => {
       const li = document.createElement('li');
       const meTag = p.id === myId ? ' (Bạn)' : '';
-      // Nhân vật ẩn Sans được giấu kín: người khác chỉ thấy tên và màu mặc định bình thường
+      // Nhân vật ẩn được giấu kín và không hiển thị tên phụ kiện (mũ/mặt nạ) kế tên
+      const isSecretPlayer = !!(p.secretChar || p.sansActive || p.knightActive);
       const sk = getSkinInfo(p.skin);
       const hatObj = HATS.find(h => h.id === p.hat);
-      const hatLabel = hatObj && hatObj.id !== 'none' ? ` · ${hatObj.name}` : '';
+      const hatLabel = (!isSecretPlayer && hatObj && hatObj.id !== 'none') ? ` · ${hatObj.name}` : '';
       let badge = '';
       if (p.id === data.hostId) badge = '<span class="host-badge">★ Chủ phòng</span>';
       else if (p.isBot) badge = '<span class="bot-badge">BOT</span>';
@@ -1363,9 +1652,14 @@ function handleClientPacket(data) {
     for (const id in groundItemMeshes) { scene.remove(groundItemMeshes[id]); delete groundItemMeshes[id]; }
     for (let i = activeBlasters3D.length - 1; i >= 0; i--) { scene.remove(activeBlasters3D[i].mesh); disposeObject3D(activeBlasters3D[i].mesh); }
     activeBlasters3D.length = 0;
+    for (let i = activeShadeSouls3D.length - 1; i >= 0; i--) { scene.remove(activeShadeSouls3D[i].mesh); disposeObject3D(activeShadeSouls3D[i].mesh); }
+    activeShadeSouls3D.length = 0;
+    for (let i = activeVoidBursts3D.length - 1; i >= 0; i--) { scene.remove(activeVoidBursts3D[i].mesh); disposeObject3D(activeVoidBursts3D[i].mesh); }
+    activeVoidBursts3D.length = 0;
     stunOverlay.classList.add('hidden');
     for (const id in smoothPlayers) delete smoothPlayers[id];
-    showScreen(gameScreen); resize3D(); detectTouchControls(); showTemporarySwipeTip();
+    boostVignette.classList.add('hidden');
+    showScreen(gameScreen); resize3D(); detectTouchControls(); showTemporarySwipeTip(); startGameBgm(true);
   } else if (data.type === 'gameState') {
     gamePhase = data.phase; gameTimer = data.timer; isFinalMinute = !!data.isFinalMinute;
     xrayActive = !!data.xrayActive; xrayCountdown = data.xrayCountdown || 0;
@@ -1378,10 +1672,12 @@ function handleClientPacket(data) {
     updateHUD();
   } else if (data.type === 'flashEffect') spawnFlashBeamEffect(data.x, data.y, data.yaw);
   else if (data.type === 'blasterEffect') spawnGasterBlaster3D(data.x, data.y, data.yaw, data.beamDist, data.chargeSec, data.beamSec);
+  else if (data.type === 'shadeSoulEffect') spawnShadeSoul3D(data.x, data.y, data.yaw, data.range, data.speed);
   else if (data.type === 'stunnedSound') playStunHitSound();
+  else if (data.type === 'boostSound') playSpeedBoostSound();
   else if (data.type === 'toast') showToast(data.message, data.style || 'info');
   else if (data.type === 'gameEnded') {
-    gamePhase = 'ended'; isFinalMinute = false; xrayActive = false; blindOverlay.style.opacity = '0'; seekerRedLight.visible = false;
+    gamePhase = 'ended'; isFinalMinute = false; xrayActive = false; blindOverlay.style.opacity = '0'; stunOverlay.classList.add('hidden'); boostVignette.classList.add('hidden'); seekerRedLight.visible = false; stopGameBgm();
     settingsOverlay.classList.add('hidden'); if (document.pointerLockElement) document.exitPointerLock();
     const myRes = data.results.find(r => r.id === myId);
     if (myRes) { endPersonalTitle.textContent = myRes.outcome === 'win' ? '🏆 BẠN ĐÃ CHIẾN THẮNG!' : '💀 BẠN ĐÃ THUA CUỘC!'; endPersonalTitle.style.color = myRes.outcome === 'win' ? '#4ade80' : '#ff6b6b'; }
@@ -1410,7 +1706,7 @@ btnCreate.addEventListener('click', () => {
   peer.on('open', (id) => {
     myId = id; currentRoomCode = code; setMenuLoading(false, '');
     if (!hostRoom || hostRoom.code !== code) {
-      hostRoom = { code, hostId: id, phase: 'lobby', timer: 0, matchDuration: 180, finalMinuteAlerted: false, items: [], activeBlasters: [], players: { [id]: createPlayerObj(id, name, myCosmetics, false) } };
+      hostRoom = { code, hostId: id, phase: 'lobby', timer: 0, matchDuration: 180, finalMinuteAlerted: false, items: [], activeBlasters: [], activeShadeSouls: [], players: { [id]: createPlayerObj(id, name, myCosmetics, false) } };
       startHostGameLoop();
     }
     hostEmitLobby();
@@ -1432,6 +1728,8 @@ btnCreate.addEventListener('click', () => {
       else if (msg.type === 'rescue') hostHandleRescue(conn.peer, msg);
       else if (msg.type === 'useItem') hostHandleUseFlashlight(conn.peer, msg);
       else if (msg.type === 'blaster') hostHandleBlaster(conn.peer, msg);
+      else if (msg.type === 'shadeSoul') hostHandleShadeSoul(conn.peer, msg);
+      else if (msg.type === 'seekerBoost') hostHandleSeekerBoost(conn.peer, msg);
     });
     conn.on('close', () => {
       const left = hostRoom.players[conn.peer], hadItem = left?.hasItem;
@@ -1460,7 +1758,7 @@ btnJoin.addEventListener('click', () => {
     hostConn.on('open', () => { connected = true; clearTimeout(relayNotice); clearTimeout(timeout); setMenuLoading(false, ''); hostConn.send({ type: 'join', name, skin: myCosmetics.skin, hat: myCosmetics.hat }); });
     hostConn.on('data', (msg) => handleClientPacket(msg));
     hostConn.on('error', () => { if (!connected) { clearTimeout(relayNotice); clearTimeout(timeout); setMenuLoading(false, 'Kết nối gián đoạn, thử bấm Vào Phòng lại!'); } });
-    hostConn.on('close', () => { if (connected) { showScreen(menuScreen); menuError.textContent = 'Chủ phòng đã đóng phòng hoặc mất kết nối.'; } });
+    hostConn.on('close', () => { if (connected) { stopGameBgm(); showScreen(menuScreen); menuError.textContent = 'Chủ phòng đã đóng phòng hoặc mất kết nối.'; } });
   });
   peer.on('error', (err) => { clearTimeout(relayNotice); clearTimeout(timeout); setMenuLoading(false, err.type === 'peer-unavailable' ? 'Không tìm thấy mã phòng ' + code + '!' : 'Lỗi kết nối (' + err.type + ').'); });
 });
@@ -1492,12 +1790,12 @@ btnStartGame.addEventListener('click', () => {
   const seekerIdx = Math.floor(Math.random() * list.length), spawns = validHiderSpawns.slice().sort(() => Math.random() - 0.5);
   let sIdx = 0;
   list.forEach((p, idx) => {
-    p.input = { dx: 0, dy: 0 }; p.lockTimer = 0; p.graceTimer = 0; p.blindTimer = 0; p.stunTimer = 0; p.blasterCooldown = 0; p.hasItem = false; p.yaw = 0; p.tpSeq++;
+    p.input = { dx: 0, dy: 0 }; p.lockTimer = 0; p.graceTimer = 0; p.blindTimer = 0; p.stunTimer = 0; p.stunSource = 'sans'; p.blasterCooldown = 0; p.shadeCooldown = 0; p.boostTimer = 0; p.boostCooldown = 0; p.hasItem = false; p.yaw = 0; p.tpSeq++;
     if (idx === seekerIdx) { p.role = 'seeker'; p.status = 'seeking'; p.x = (CENTER_TILE + 0.5) * TILE_SIZE; p.y = (CENTER_TILE + 0.5) * TILE_SIZE; }
     else { p.role = 'hider'; p.status = 'alive'; const sp = spawns[sIdx % spawns.length] || { r: 1, c: 1 }; sIdx++; p.x = (sp.c + 0.5) * TILE_SIZE; p.y = (sp.r + 0.5) * TILE_SIZE; }
   });
 
-  hostRoom.items = []; hostRoom.activeBlasters = []; hostMaintainFlashlights(); hostRoom.phase = 'prep'; hostRoom.timer = PREP_DURATION; hostRoom.finalMinuteAlerted = false;
+  hostRoom.items = []; hostRoom.activeBlasters = []; hostRoom.activeShadeSouls = []; hostMaintainFlashlights(); hostRoom.phase = 'prep'; hostRoom.timer = PREP_DURATION; hostRoom.finalMinuteAlerted = false;
   hostBroadcast({ type: 'gameStarted', phase: 'prep', timer: PREP_DURATION, mapRows: encodeMapGrid(newMap) });
   hostBroadcast({ type: 'toast', message: `${list[seekerIdx].name} là NGƯỜI BẮT! Hãy chạy trốn trong 15s!`, style: 'warning' });
 });
@@ -1540,16 +1838,39 @@ function buildActionSnapshot() { return { x: Math.round(localPlayer.x * 10) / 10
 function sendRescue() { const s = buildActionSnapshot(); if (isHost) hostHandleRescue(myId, s); else if (hostConn && hostConn.open) hostConn.send({ type: 'rescue', ...s }); }
 function sendUseFlashlight() { const s = buildActionSnapshot(); if (isHost) hostHandleUseFlashlight(myId, s); else if (hostConn && hostConn.open) hostConn.send({ type: 'useItem', ...s }); }
 function sendUseBlaster() { const s = buildActionSnapshot(); if (isHost) hostHandleBlaster(myId, s); else if (hostConn && hostConn.open) hostConn.send({ type: 'blaster', ...s }); }
+function sendUseShadeSoul() { const s = buildActionSnapshot(); if (isHost) hostHandleShadeSoul(myId, s); else if (hostConn && hostConn.open) hostConn.send({ type: 'shadeSoul', ...s }); }
+function sendUseSeekerBoost() {
+  const me = renderPlayers.find(p => p.id === myId);
+  if (!me || me.role !== 'seeker' || me.sansActive || me.knightActive || me.secretChar) return;
+  const s = buildActionSnapshot();
+  if (isHost) hostHandleSeekerBoost(myId, s);
+  else if (hostConn && hostConn.open) hostConn.send({ type: 'seekerBoost', ...s });
+}
 function sendPrimarySkillOrItem() {
   const me = renderPlayers.find(p => p.id === myId);
-  if (me && me.role === 'seeker' && me.sansActive) sendUseBlaster();
+  if (!me) return;
+  if (me.sansActive) sendUseBlaster();
+  else if (me.knightActive) sendUseShadeSoul();
+  else if (me.role === 'seeker') sendUseSeekerBoost();
   else sendUseFlashlight();
 }
 
 window.addEventListener('keydown', (e) => {
   if (!gameScreen.classList.contains('active') || !settingsOverlay.classList.contains('hidden')) return;
   const k = e.key.toLowerCase(); keys[k] = true;
-  if (e.code === 'Space' || k === 'e') { e.preventDefault(); sendRescue(); }
+  if (e.key === 'Shift') {
+    const me = renderPlayers.find(p => p.id === myId);
+    if (me && me.role === 'seeker' && !me.sansActive && !me.knightActive && !me.secretChar) {
+      e.preventDefault(); sendUseSeekerBoost();
+    }
+  }
+  if (e.code === 'Space' || k === 'e') {
+    e.preventDefault();
+    const me = renderPlayers.find(p => p.id === myId);
+    if (me && me.role === 'seeker') {
+      if (!me.sansActive && !me.knightActive && !me.secretChar) sendUseSeekerBoost();
+    } else sendRescue();
+  }
   if (k === 'f' || k === 'q') { e.preventDefault(); sendPrimarySkillOrItem(); }
 });
 window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
@@ -1590,6 +1911,10 @@ btnMobileRescue.addEventListener('touchstart', (e) => { e.preventDefault(); send
 btnMobileFlash.addEventListener('touchstart', (e) => { e.preventDefault(); sendUseFlashlight(); }, { passive: false }); btnMobileFlash.addEventListener('click', sendUseFlashlight);
 btnMobileBlaster.addEventListener('touchstart', (e) => { e.preventDefault(); sendUseBlaster(); }, { passive: false });
 btnMobileBlaster.addEventListener('click', sendUseBlaster);
+btnMobileShade.addEventListener('touchstart', (e) => { e.preventDefault(); sendUseShadeSoul(); }, { passive: false });
+btnMobileShade.addEventListener('click', sendUseShadeSoul);
+btnMobileBoost.addEventListener('touchstart', (e) => { e.preventDefault(); sendUseSeekerBoost(); }, { passive: false });
+btnMobileBoost.addEventListener('click', sendUseSeekerBoost);
 
 function updateHUD() {
   const me = renderPlayers.find(p => p.id === myId); if (!me) return;
@@ -1609,7 +1934,9 @@ function updateHUD() {
   caughtVignette.classList.toggle('hidden', me.status !== 'jailed');
 
   const isAliveHider = (me.role === 'hider' && me.status === 'alive');
-  hudItemBadge.classList.toggle('hidden', !isAliveHider); hudItemBadge.classList.toggle('has-item', isAliveHider && me.hasItem);
+  const isHiddenChar = !!(me.sansActive || me.knightActive || me.secretChar);
+  const showFlashlightHud = isAliveHider && !isHiddenChar;
+  hudItemBadge.classList.toggle('hidden', !showFlashlightHud); hudItemBadge.classList.toggle('has-item', showFlashlightHud && me.hasItem);
   hudItemBadge.textContent = me.hasItem ? '🔦 ĐÈN (1/1)' : '🔦 Trống';
 
   if (me.role === 'seeker') { const isSansS = !!me.sansActive, isKnightS = !!me.knightActive; hudRole.textContent = me.blindTimer > 0 ? `⚡ CHÓI (${me.blindTimer.toFixed(1)}s)` : (isSansS ? '🔵 NGƯỜI BẮT' : (isKnightS ? '🟣 NGƯỜI BẮT' : '🔴 NGƯỜI BẮT')); hudRole.style.borderColor = me.blindTimer > 0 ? '#fde047' : (isSansS ? '#38bdf8' : (isKnightS ? '#a78bfa' : '#ff595e')); hudRole.style.color = me.blindTimer > 0 ? '#fef08a' : (isSansS ? '#7dd3fc' : (isKnightS ? '#e9d5ff' : '#ff8a8e')); }
@@ -1622,39 +1949,90 @@ function updateHUD() {
   const elimCount = renderPlayers.filter(p => p.role === 'hider' && p.status === 'eliminated').length;
   hudStats.textContent = `Sống: ${aliveCount} | Giam: ${jailedCount} | Loại: ${elimCount}`;
 
-  // Hiệu ứng & đếm ngược khi Người Chạy bị choáng bởi tia Gaster Blaster
-  const isStunned = (me.role === 'hider' && me.status === 'alive' && me.stunTimer > 0);
+  // Hiệu ứng & đếm ngược khi bị choáng (áp dụng cho cả Người Chạy & Người Bắt)
+  const isStunned = ((me.role === 'seeker' || isAliveHider) && me.stunTimer > 0);
+  const isVoidStun = (me.stunSource === 'knight');
   stunOverlay.classList.toggle('hidden', !isStunned);
+  stunOverlay.classList.toggle('void-stun', isStunned && isVoidStun);
   if (isStunned) {
-    stunCountdown.textContent = `Đứng im không thể di chuyển: ${me.stunTimer.toFixed(1)}s`;
-    hudRole.textContent = `⚡ BỊ CHOÁNG (${me.stunTimer.toFixed(1)}s)`;
-    hudRole.style.borderColor = '#38bdf8';
-    hudRole.style.color = '#7dd3fc';
+    stunCountdown.textContent = me.role === 'seeker'
+      ? `Đứng im & không thể bắt người: ${me.stunTimer.toFixed(1)}s`
+      : `Đứng im không thể di chuyển: ${me.stunTimer.toFixed(1)}s`;
+    hudRole.textContent = isVoidStun ? `🌑 BỊ CHOÁNG (${me.stunTimer.toFixed(1)}s)` : `⚡ BỊ CHOÁNG (${me.stunTimer.toFixed(1)}s)`;
+    hudRole.style.borderColor = isVoidStun ? '#a78bfa' : '#38bdf8';
+    hudRole.style.color = isVoidStun ? '#ddd6fe' : '#7dd3fc';
   }
 
-  // Kỹ năng ẩn Gaster Blaster (chỉ hiện riêng cho Sans khi là Người Bắt trong giai đoạn đuổi bắt)
-  const isSansSeekerPlaying = (me.role === 'seeker' && me.sansActive && gamePhase === 'playing');
-  const blasterReady = isSansSeekerPlaying && ((me.blasterCd || 0) <= 0);
-  hudBlasterBadge.classList.toggle('hidden', !isSansSeekerPlaying);
+  // Kỹ năng ẩn Gaster Blaster (Sans — dùng được ở CẢ 2 PHE: Người Bắt và Người Chạy còn sống)
+  const canUseSansSkill = (!!me.sansActive && gamePhase === 'playing' && (me.role === 'seeker' || isAliveHider));
+  const blasterReady = canUseSansSkill && !isStunned && ((me.blasterCd || 0) <= 0);
+  hudBlasterBadge.classList.toggle('hidden', !canUseSansSkill);
   hudBlasterBadge.classList.toggle('ready', blasterReady);
-  if (isSansSeekerPlaying) {
+  if (canUseSansSkill) {
     hudBlasterBadge.textContent = blasterReady ? '💀 BLASTER: SẴN SÀNG [F]' : `💀 Blaster: ${me.blasterCd}s`;
   }
-
-  btnMobileBlaster.classList.toggle('hidden', !isSansSeekerPlaying);
+  btnMobileBlaster.classList.toggle('hidden', !canUseSansSkill);
+  btnMobileBlaster.classList.toggle('as-hider', me.role === 'hider');
   btnMobileBlaster.classList.toggle('ready', blasterReady);
-  if (isSansSeekerPlaying) {
+  if (canUseSansSkill) {
     btnMobileBlaster.innerHTML = blasterReady ? '💀<br>BẮN' : `💀<br>${me.blasterCd}s`;
   }
 
+  // Kỹ năng ẩn Shade Soul (The Knight — dùng được ở CẢ 2 PHE: Người Bắt và Người Chạy còn sống)
+  const canUseKnightSkill = (!!me.knightActive && gamePhase === 'playing' && (me.role === 'seeker' || isAliveHider));
+  const shadeReady = canUseKnightSkill && !isStunned && ((me.shadeCd || 0) <= 0);
+  hudShadeBadge.classList.toggle('hidden', !canUseKnightSkill);
+  hudShadeBadge.classList.toggle('ready', shadeReady);
+  if (canUseKnightSkill) {
+    hudShadeBadge.textContent = shadeReady ? '🌑 SHADE SOUL: SẴN SÀNG [F]' : `🌑 Shade Soul: ${me.shadeCd}s`;
+  }
+  btnMobileShade.classList.toggle('hidden', !canUseKnightSkill);
+  btnMobileShade.classList.toggle('as-hider', me.role === 'hider');
+  btnMobileShade.classList.toggle('ready', shadeReady);
+  if (canUseKnightSkill) {
+    btnMobileShade.innerHTML = shadeReady ? '🌑<br>SOUL' : `🌑<br>${me.shadeCd}s`;
+  }
+
+  // Kỹ năng Tăng Tốc của Người Tìm (chỉ dành cho Người Tìm thường; nhân vật ẩn chỉ dùng kỹ năng cá nhân)
+  const isSeekerPlaying = (me.role === 'seeker' && gamePhase === 'playing');
+  const hasBoostSkill = (isSeekerPlaying && !isFinalMinute && !isHiddenChar);
+  const isBoosting = (hasBoostSkill && (me.boostTimer || 0) > 0);
+  const boostReady = (hasBoostSkill && !isStunned && !isBoosting && ((me.boostCd || 0) <= 0));
+  const showBoostBadge = hasBoostSkill || (isSeekerPlaying && isFinalMinute);
+
+  boostVignette.classList.toggle('hidden', !isBoosting);
+  hudBoostBadge.classList.toggle('hidden', !showBoostBadge);
+  hudBoostBadge.classList.toggle('ready', boostReady);
+  hudBoostBadge.classList.toggle('active-boost', isBoosting);
+  hudBoostBadge.classList.toggle('final-speed', isSeekerPlaying && isFinalMinute);
+  if (showBoostBadge) {
+    if (isFinalMinute) hudBoostBadge.textContent = '🔥 TỐC ĐỘ PHÚT CUỐI';
+    else if (isBoosting) hudBoostBadge.textContent = `⚡ TĂNG TỐC: ${me.boostTimer.toFixed(1)}s`;
+    else if (boostReady) hudBoostBadge.textContent = '⚡ TĂNG TỐC: SẴN SÀNG [SHIFT]';
+    else hudBoostBadge.textContent = `⚡ Tăng tốc: ${me.boostCd}s`;
+  }
+
+  btnMobileBoost.classList.toggle('hidden', !hasBoostSkill);
+  btnMobileBoost.classList.toggle('with-secret', false);
+  btnMobileBoost.classList.toggle('ready', boostReady);
+  btnMobileBoost.classList.toggle('active-boost', isBoosting);
+  if (hasBoostSkill) {
+    if (isBoosting) btnMobileBoost.innerHTML = `⚡<br>${me.boostTimer.toFixed(1)}s`;
+    else if (boostReady) btnMobileBoost.innerHTML = '⚡<br>TĂNG';
+    else btnMobileBoost.innerHTML = `⚡<br>${me.boostCd}s`;
+  }
+
   const curX = localPlayer.initialized ? localPlayer.x : me.x, curY = localPlayer.initialized ? localPlayer.y : me.y;
-  btnMobileRescue.classList.toggle('hidden', !isAliveHider); btnMobileFlash.classList.toggle('hidden', !(isAliveHider && me.hasItem));
+  btnMobileRescue.classList.toggle('hidden', !isAliveHider);
+  btnMobileFlash.classList.toggle('hidden', !(showFlashlightHud && me.hasItem));
   const hasRescuable = renderPlayers.some(p => p.role === 'hider' && p.status === 'jailed' && p.lockTimer <= 0);
   const canRescue = (gamePhase === 'playing' && isAliveHider && !isStunned && isInRescueZone(curX, curY) && hasRescuable);
   btnMobileRescue.classList.toggle('ready', canRescue);
   rescuePrompt.classList.toggle('hidden', !(canRescue && !isTouchDevice));
-  flashPrompt.classList.toggle('hidden', !(isAliveHider && me.hasItem && !isTouchDevice));
+  flashPrompt.classList.toggle('hidden', !(showFlashlightHud && me.hasItem && !isTouchDevice));
   blasterPrompt.classList.toggle('hidden', !(blasterReady && !isTouchDevice));
+  shadePrompt.classList.toggle('hidden', !(shadeReady && !isTouchDevice));
+  boostPrompt.classList.toggle('hidden', !(boostReady && !isTouchDevice));
 }
 
 function drawMinimap(mePos, meObj) {
@@ -1694,7 +2072,7 @@ function drawMinimap(mePos, meObj) {
     }
   }
 
-  if (meObj && meObj.role === 'hider' && meObj.status === 'alive') {
+  if (meObj && meObj.role === 'hider' && meObj.status === 'alive' && !meObj.secretChar) {
     mctx.fillStyle = '#fde047';
     renderItems.forEach(it => {
       mctx.beginPath();
@@ -1743,11 +2121,13 @@ function drawMinimap(mePos, meObj) {
   mctx.restore();
 }
 
+let baseCameraFov = 74;
 function resize3D() {
   const w = window.visualViewport ? window.visualViewport.width : window.innerWidth;
   const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
   const aspect = w / Math.max(1, h);
-  camera.fov = aspect > 1.9 ? 67 : (aspect < 0.8 ? 82 : 74); camera.aspect = aspect;
+  baseCameraFov = aspect > 1.9 ? 67 : (aspect < 0.8 ? 82 : 74);
+  camera.fov = baseCameraFov; camera.aspect = aspect;
   camera.updateProjectionMatrix(); renderer.setSize(w, h, false); detectTouchControls();
 }
 window.addEventListener('resize', resize3D);
@@ -1885,6 +2265,78 @@ function animate(now) {
     }
   }
 
+  // Hoạt ảnh vòng nổ Hư Không tại điểm phóng Shade Soul
+  for (let i = activeVoidBursts3D.length - 1; i >= 0; i--) {
+    const vb = activeVoidBursts3D[i];
+    vb.elapsed += dt;
+    const p = Math.min(1, vb.elapsed / vb.duration);
+    const easeOut = 1 - Math.pow(1 - p, 3);
+    const sc = 0.35 + easeOut * 1.95;
+    vb.mesh.scale.set(sc, sc, 1);
+    vb.mesh.rotation.z += dt * 4.5;
+    const ud = vb.mesh.userData;
+    const fade = Math.max(0, 1 - p);
+    ud.darkRingMat.opacity = 0.92 * fade;
+    ud.violetRingMat.opacity = 0.88 * fade;
+    ud.soulWave.scale.setScalar(1 + p * 0.45);
+    ud.light.intensity = 3.6 * fade;
+    if (p >= 1) {
+      scene.remove(vb.mesh);
+      disposeObject3D(vb.mesh);
+      activeVoidBursts3D.splice(i, 1);
+    }
+  }
+
+  // Hoạt ảnh 3D Shade Soul của The Knight (bay xuyên tường + tua Hư Không uốn lượn + giọt mực)
+  for (let i = activeShadeSouls3D.length - 1; i >= 0; i--) {
+    const s = activeShadeSouls3D[i];
+    s.elapsed += dt;
+    s.traveled += s.speed * dt;
+    const fx = -Math.sin(s.yaw), fy = -Math.cos(s.yaw);
+    const curX = s.startX + fx * s.traveled;
+    const curY = s.startY + fy * s.traveled;
+    const ud = s.mesh.userData;
+
+    const growIn = Math.min(1, s.elapsed / 0.14);
+    const remainRatio = Math.max(0, 1 - s.traveled / s.range);
+    const fadeOut = remainRatio < 0.14 ? Math.max(0.01, remainRatio / 0.14) : 1.0;
+    const sc = (0.45 + (1 - Math.pow(1 - growIn, 3)) * 0.72) * fadeOut;
+
+    s.mesh.position.set(curX * WORLD_SCALE, 1.48 + Math.sin(t * 14 + i) * 0.045, curY * WORLD_SCALE);
+    s.mesh.scale.set(sc, sc, sc * (1.0 + (1 - growIn) * 0.35));
+
+    // Uốn lượn 7 tua râu Hư Không sống động
+    ud.tendrils.forEach(th => {
+      const ph = th.userData.phase;
+      th.rotation.x = Math.sin(t * 16 + ph) * 0.13;
+      th.rotation.y = Math.cos(t * 14 + ph) * 0.14;
+      th.rotation.z = Math.sin(t * 11 + ph) * 0.10;
+    });
+
+    // Chuyển động hạt mực đen & đốm linh hồn kéo đuôi
+    ud.particles.forEach(sp => {
+      const d = sp.userData;
+      const cycle = ((d.zOff + s.elapsed * d.speed) % 3.4) + 0.45;
+      sp.position.set(
+        d.baseX + Math.sin(t * 9 + d.phase) * 0.09,
+        d.baseY + Math.cos(t * 8 + d.phase) * 0.09,
+        cycle
+      );
+    });
+
+    ud.auraRing.rotation.z += dt * 9;
+    ud.rimGlowMat.opacity = 0.36 * fadeOut;
+    ud.pierceBodyMat.opacity = 0.30 * fadeOut;
+    ud.pierceEyeMat.opacity = 0.82 * fadeOut;
+    ud.light.intensity = 3.2 * fadeOut;
+
+    if (s.traveled >= s.range) {
+      scene.remove(s.mesh);
+      disposeObject3D(s.mesh);
+      activeShadeSouls3D.splice(i, 1);
+    }
+  }
+
   const meObj = renderPlayers.find(p => p.id === myId);
   if (meObj && localPlayer.initialized && gamePhase !== 'ended') {
     const keyTurnSpeed = 2.25 * userSettings.mouseSens;
@@ -1905,11 +2357,11 @@ function animate(now) {
     }
 
     const prevX = localPlayer.x, prevY = localPlayer.y;
-    let spd = meObj.role === 'seeker' ? SEEKER_SPEED : HIDER_SPEED, physPhase = gamePhase;
+    let spd = meObj.role === 'seeker' ? getSeekerMoveSpeed(meObj, isFinalMinute) : HIDER_SPEED, physPhase = gamePhase;
     if (meObj.status === 'jailed') spd = HIDER_SPEED * 0.75;
     else if (meObj.status === 'eliminated') { spd = HIDER_SPEED * 1.15; physPhase = 'playing'; }
 
-    if (meObj.stunTimer > 0 && meObj.role === 'hider' && meObj.status === 'alive') {
+    if (meObj.stunTimer > 0 && (meObj.role === 'seeker' || (meObj.role === 'hider' && meObj.status === 'alive'))) {
       localPlayer.moving = false;
     } else {
       const proxy = { x: localPlayer.x, y: localPlayer.y, status: meObj.status };
@@ -1970,9 +2422,15 @@ function animate(now) {
       }
       if (ud.seekerAuraRing) { const pulse = 1 + Math.sin(t * 6) * 0.14; ud.seekerAuraRing.scale.set(pulse, pulse, 1); ud.seekerAuraRing.material.opacity = 0.5 + Math.sin(t * 6) * 0.22; }
       if (ud.stunEffectGroup) {
-        const showStun = (p.role === 'hider' && p.status === 'alive' && p.stunTimer > 0);
+        const showStun = ((p.role === 'seeker' || (p.role === 'hider' && p.status === 'alive')) && p.stunTimer > 0);
         ud.stunEffectGroup.visible = showStun;
         if (showStun) {
+          const src = p.stunSource || 'sans';
+          if (ud.stunEffectGroup.userData.lastSource !== src) {
+            ud.stunEffectGroup.userData.lastSource = src;
+            ud.stunEffectGroup.userData.rMat1.color.setHex(src === 'knight' ? 0xa78bfa : 0x38bdf8);
+            ud.stunEffectGroup.userData.rMat2.color.setHex(src === 'knight' ? 0xf5f3ff : 0xe0f2fe);
+          }
           ud.stunEffectGroup.userData.ring1.rotation.z += dt * 5.2;
           ud.stunEffectGroup.userData.ring2.rotation.z -= dt * 6.4;
         }
@@ -2017,6 +2475,17 @@ function animate(now) {
     const bob = (localPlayer.moving && !isSpec) ? Math.sin(t * 12) * 0.075 : 0;
     camera.position.set(localPlayer.x * WORLD_SCALE, isSpec ? 2.55 : (1.62 + bob), localPlayer.y * WORLD_SCALE);
     camera.rotation.y = camYaw; camera.rotation.x = camPitch; playerFlashLight.position.copy(camera.position);
+
+    const meIsHidden = !!(meObj.sansActive || meObj.knightActive || meObj.secretChar);
+    const targetFov = baseCameraFov + (
+      (meObj.role === 'seeker' && gamePhase === 'playing')
+        ? (isFinalMinute ? 3.5 : ((!meIsHidden && (meObj.boostTimer || 0) > 0) ? 8.0 : 0))
+        : 0
+    );
+    if (Math.abs(camera.fov - targetFov) > 0.05) {
+      camera.fov += (targetFov - camera.fov) * Math.min(1, dt * 8);
+      camera.updateProjectionMatrix();
+    }
   }
 
   renderer.render(scene, camera);

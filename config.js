@@ -5,6 +5,10 @@ const FLASH_HALF_ANGLE = 0.70;
 const BLIND_DURATION = 5;
 const SEEKER_LIGHT_RANGE = 24;
 const SEEKER_SPEED = 236;
+const SEEKER_FINAL_SPEED = 272;
+const SEEKER_BOOST_SPEED = 315;
+const SEEKER_BOOST_DURATION = 5;
+const SEEKER_BOOST_COOLDOWN = 25;
 const HIDER_SPEED = 206;
 const JAIL_LOCK_SECONDS = 20;
 const MAX_ITEMS_TOTAL = 4;
@@ -14,6 +18,12 @@ const BLASTER_RANGE = 1280;
 const BLASTER_HIT_WIDTH = 42;
 const BLASTER_CHARGE_SEC = 0.52;
 const BLASTER_BEAM_SEC = 1.15;
+const SHADE_SOUL_COOLDOWN = 25;
+const SHADE_SOUL_STUN_DURATION = 5;
+const SHADE_SOUL_RANGE = 1280;
+const SHADE_SOUL_SPEED = 780;
+const SHADE_SOUL_HIT_RADIUS = 56;
+
 
 
 const MAX_PLAYERS = 20;
@@ -25,7 +35,7 @@ const PLAYER_RADIUS = 15;
 const PREP_DURATION = 15;
 const FINAL_MINUTE_SEC = 60;
 const XRAY_CYCLE_SEC = XRAY_ON_SEC + XRAY_OFF_SEC;
-const ROOM_PREFIX = 'br35v9-';
+const ROOM_PREFIX = 'br35v13-';
 
 const SKINS = [
   { id: 'white',     name: 'Trắng Gốc',      hex: 0xf1f3f8, css: '#f1f3f8' },

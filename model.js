@@ -1110,11 +1110,8 @@ function buildSansCharacterMesh(isSeeker = false, includeXray = false) {
     bodyGroup.add(xrayGroup);
   }
 
-  let stunEffectGroup = null;
-  if (!isSeeker) {
-    stunEffectGroup = createStunEffectGroup();
-    root.add(stunEffectGroup);
-  }
+  const stunEffectGroup = createStunEffectGroup();
+  root.add(stunEffectGroup);
 
   root.userData = {
     bodyGroup,
@@ -1556,11 +1553,8 @@ function buildKnightCharacterMesh(isSeeker = false, includeXray = false) {
     bodyGroup.add(xrayGroup);
   }
 
-  let stunEffectGroup = null;
-  if (!isSeeker) {
-    stunEffectGroup = createStunEffectGroup();
-    root.add(stunEffectGroup);
-  }
+  const stunEffectGroup = createStunEffectGroup();
+  root.add(stunEffectGroup);
 
   root.userData = {
     bodyGroup,
@@ -1630,11 +1624,8 @@ function buildCharacterMesh(skinHex, hatId, isSeeker, includeXray = false, secre
     body.grp.add(xrayGroup);
   }
 
-  let stunEffectGroup = null;
-  if (!isSeeker) {
-    stunEffectGroup = createStunEffectGroup();
-    root.add(stunEffectGroup);
-  }
+  const stunEffectGroup = createStunEffectGroup();
+  root.add(stunEffectGroup);
 
   root.userData = {
     bodyGroup: body.grp, leftLeg: body.leftLeg, rightLeg: body.rightLeg,
@@ -2050,22 +2041,271 @@ function createStunEffectGroup() {
   ring3.position.y = 0.06;
   grp.add(ring1, ring2, ring3);
   grp.visible = false;
-  grp.userData = { ring1, ring2 };
+  grp.userData = { ring1, ring2, rMat1, rMat2, lastSource: 'sans' };
   return grp;
 }
 
 function disposeObject3D(obj) {
   if (!obj) return;
   obj.traverse(child => {
-    if (child.geometry && child.geometry !== gasterCraniumGeo && child.geometry !== gasterLeftHornGeo && child.geometry !== gasterRightHornGeo && child.geometry !== gasterLeftJawArmGeo && child.geometry !== gasterRightJawArmGeo && child.geometry !== knightMaskGeo && child.geometry !== knightCloakGeo && child.geometry !== knightLeftHornMainGeo && child.geometry !== knightRightHornMainGeo && child.geometry !== knightLeftHornSpurGeo && child.geometry !== knightRightHornSpurGeo) {
+    if (child.geometry && child.geometry !== gasterCraniumGeo && child.geometry !== gasterLeftHornGeo && child.geometry !== gasterRightHornGeo && child.geometry !== gasterLeftJawArmGeo && child.geometry !== gasterRightJawArmGeo && child.geometry !== knightMaskGeo && child.geometry !== knightCloakGeo && child.geometry !== knightLeftHornMainGeo && child.geometry !== knightRightHornMainGeo && child.geometry !== knightLeftHornSpurGeo && child.geometry !== knightRightHornSpurGeo && child.geometry !== shadeSoulHeadGeo && !shadeTendrilGeos.includes(child.geometry)) {
       child.geometry.dispose();
     }
     if (child.material) {
       const mats = Array.isArray(child.material) ? child.material : [child.material];
       mats.forEach(m => {
-        if (m.map && m.map !== gasterBoneTex && m.map !== sansCyanGlowTex) m.map.dispose();
+        if (m.map && m.map !== gasterBoneTex && m.map !== sansCyanGlowTex && m.map !== knightSoulGlowTex && m.map !== voidDropletTex) m.map.dispose();
         m.dispose();
       });
     }
   });
+}
+
+
+// =========================================================================
+// MÔ HÌNH 3D SHADE SOUL (TINH LINH HƯ KHÔNG XUYÊN TƯỜNG CỦA THE KNIGHT)
+// =========================================================================
+function createShadeSoulHeadGeometry() {
+  const segU = 36, segV = 28;
+  const positions = [], uvs = [], indices = [];
+
+  for (let j = 0; j <= segV; j++) {
+    const v = j / segV;
+    const theta = v * Math.PI; // 0 = mũi trước (-Z), PI = đuôi sau (+Z)
+    const ct = Math.cos(theta), st = Math.sin(theta);
+
+    let z, radScale;
+    if (ct >= 0) {
+      z = -ct * 0.80;
+      radScale = Math.pow(st, 0.84);
+    } else {
+      z = -ct * 1.24;
+      radScale = Math.pow(st, 1.12);
+    }
+
+    const rx = 0.52 * radScale;
+    const ry = 0.58 * radScale;
+
+    for (let i = 0; i <= segU; i++) {
+      const u = i / segU;
+      const phi = u * Math.PI * 2;
+      positions.push(Math.cos(phi) * rx, Math.sin(phi) * ry, z);
+      uvs.push(u, v);
+    }
+  }
+
+  for (let j = 0; j < segV; j++) {
+    for (let i = 0; i < segU; i++) {
+      const a = j * (segU + 1) + i;
+      const b = a + 1;
+      const c = a + (segU + 1);
+      const d = c + 1;
+      indices.push(a, b, d, a, d, c);
+    }
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geo.setIndex(indices);
+  geo.computeVertexNormals();
+  return geo;
+}
+
+function createVoidDropletTexture() {
+  const c = document.createElement('canvas'); c.width = 64; c.height = 64;
+  const g = c.getContext('2d');
+  const grad = g.createRadialGradient(32, 32, 4, 32, 32, 30);
+  grad.addColorStop(0.0, 'rgba(5, 4, 12, 0.98)');
+  grad.addColorStop(0.62, 'rgba(18, 10, 38, 0.85)');
+  grad.addColorStop(0.84, 'rgba(139, 92, 246, 0.45)');
+  grad.addColorStop(1.0, 'rgba(139, 92, 246, 0)');
+  g.fillStyle = grad; g.fillRect(0, 0, 64, 64);
+  return new THREE.CanvasTexture(c);
+}
+
+const shadeSoulHeadGeo = createShadeSoulHeadGeometry();
+const voidDropletTex = createVoidDropletTexture();
+
+// 7 dải tua Hư Không đen uốn lượn mềm mại phía sau đầu Shade Soul (chuẩn ảnh mẫu)
+const SHADE_TENDRIL_SPECS = [
+  { x0:  0.00, y0:  0.34, len: 3.35, ampY:  0.22, ampX:  0.08, r0: 0.16, phase: 0.0 },
+  { x0: -0.26, y0:  0.24, len: 3.10, ampY:  0.14, ampX: -0.24, r0: 0.15, phase: 1.1 },
+  { x0:  0.26, y0:  0.24, len: 3.10, ampY:  0.14, ampX:  0.24, r0: 0.15, phase: 2.2 },
+  { x0: -0.34, y0: -0.02, len: 3.45, ampY: -0.08, ampX: -0.28, r0: 0.16, phase: 3.3 },
+  { x0:  0.34, y0: -0.02, len: 3.45, ampY: -0.08, ampX:  0.28, r0: 0.16, phase: 4.4 },
+  { x0: -0.20, y0: -0.28, len: 2.95, ampY: -0.22, ampX: -0.16, r0: 0.14, phase: 5.2 },
+  { x0:  0.20, y0: -0.28, len: 2.95, ampY: -0.22, ampX:  0.16, r0: 0.14, phase: 0.7 }
+];
+
+const shadeTendrilGeos = SHADE_TENDRIL_SPECS.map(sp => {
+  const pts = [
+    new THREE.Vector3(sp.x0, sp.y0, 0.25),
+    new THREE.Vector3(sp.x0 + sp.ampX * 0.45, sp.y0 + sp.ampY * 0.45, 0.25 + sp.len * 0.28),
+    new THREE.Vector3(sp.x0 - sp.ampX * 0.35, sp.y0 + sp.ampY * 0.95, 0.25 + sp.len * 0.62),
+    new THREE.Vector3(sp.x0 + sp.ampX * 0.55, sp.y0 + sp.ampY * 0.65, 0.25 + sp.len)
+  ];
+  return createVariableTubeGeometry(
+    pts,
+    [sp.r0, sp.r0 * 0.78, sp.r0 * 0.44, 0.012],
+    18, 10, new THREE.Vector3(0, 1, 0)
+  );
+});
+
+function createShadeSoulMesh() {
+  const root = new THREE.Group();
+  const bodyGroup = new THREE.Group();
+  root.add(bodyGroup);
+
+  const voidCoreMat = new THREE.MeshBasicMaterial({ color: 0x05040b, fog: false });
+  const rimGlowMat = new THREE.MeshBasicMaterial({
+    color: 0x7c5cff, transparent: true, opacity: 0.36, fog: false,
+    side: THREE.BackSide, depthWrite: false, blending: THREE.AdditiveBlending
+  });
+  const pierceBodyMat = new THREE.MeshBasicMaterial({
+    color: 0x2e1065, transparent: true, opacity: 0.30, fog: false,
+    depthTest: false, depthWrite: false, blending: THREE.AdditiveBlending
+  });
+  const whiteEyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff, fog: false });
+  const pierceEyeMat = new THREE.MeshBasicMaterial({
+    color: 0xf8fafc, transparent: true, opacity: 0.82, fog: false,
+    depthTest: false, depthWrite: false
+  });
+
+  // 1. Đầu tinh linh Hư Không đen tuyền + viền sáng tím + bóng xuyên tường
+  const headMesh = new THREE.Mesh(shadeSoulHeadGeo, voidCoreMat);
+  bodyGroup.add(headMesh);
+
+  const rimShell = new THREE.Mesh(shadeSoulHeadGeo, rimGlowMat);
+  rimShell.scale.set(1.11, 1.11, 1.06);
+  bodyGroup.add(rimShell);
+
+  const pierceShell = new THREE.Mesh(shadeSoulHeadGeo, pierceBodyMat);
+  pierceShell.scale.set(1.04, 1.04, 1.02);
+  pierceShell.renderOrder = 993;
+  bodyGroup.add(pierceShell);
+
+  // 2. Hai mắt bầu dục dọc trắng rực đặc trưng của Shade Soul (nhìn thấy cả khi xuyên tường!)
+  const eyeGeo = new THREE.SphereGeometry(0.145, 16, 14);
+  [-1, 1].forEach(side => {
+    const eye = new THREE.Mesh(eyeGeo, whiteEyeMat);
+    eye.scale.set(0.66, 1.38, 0.34);
+    eye.position.set(side * 0.225, 0.02, -0.665);
+    eye.rotation.y = side * -0.44;
+    eye.rotation.z = side * 0.14;
+    bodyGroup.add(eye);
+
+    const pEye = new THREE.Mesh(eyeGeo, pierceEyeMat);
+    pEye.scale.set(0.62, 1.32, 0.30);
+    pEye.position.copy(eye.position);
+    pEye.rotation.copy(eye.rotation);
+    pEye.renderOrder = 994;
+    bodyGroup.add(pEye);
+
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: knightSoulGlowTex, color: 0xffffff, transparent: true, opacity: 0.78,
+      fog: false, blending: THREE.AdditiveBlending, depthWrite: false
+    }));
+    halo.position.set(side * 0.245, 0.02, -0.71);
+    halo.scale.set(0.46, 0.56, 1);
+    bodyGroup.add(halo);
+  });
+
+  // 3. 7 dải tua Hư Không đen uốn lượn phía sau
+  const tendrils = [];
+  shadeTendrilGeos.forEach((tGeo, idx) => {
+    const tMesh = new THREE.Mesh(tGeo, voidCoreMat);
+    const tRim = new THREE.Mesh(tGeo, new THREE.MeshBasicMaterial({
+      color: 0x6d28d9, transparent: true, opacity: 0.24, fog: false,
+      side: THREE.BackSide, depthWrite: false, blending: THREE.AdditiveBlending
+    }));
+    tRim.scale.set(1.18, 1.18, 1.02);
+    const tHolder = new THREE.Group();
+    tHolder.add(tMesh, tRim);
+    tHolder.userData = { phase: SHADE_TENDRIL_SPECS[idx].phase };
+    bodyGroup.add(tHolder);
+    tendrils.push(tHolder);
+  });
+
+  // 4. Các giọt mực Hư Không đen & đốm linh hồn trắng bay rải rác theo đuôi
+  const particles = [];
+  for (let i = 0; i < 14; i++) {
+    const isSoul = (i % 3 === 0);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: isSoul ? knightSoulGlowTex : voidDropletTex,
+      color: isSoul ? 0xe0f2fe : 0xffffff,
+      transparent: true,
+      opacity: isSoul ? 0.88 : 0.92,
+      fog: false,
+      blending: isSoul ? THREE.AdditiveBlending : THREE.NormalBlending,
+      depthWrite: false
+    }));
+    const ang = (i / 14) * Math.PI * 2;
+    const rad = 0.22 + (i % 4) * 0.16;
+    const zOff = 0.55 + (i / 14) * 3.2;
+    const sc = isSoul ? (0.14 + (i % 2) * 0.08) : (0.18 + (i % 3) * 0.08);
+    sp.position.set(Math.cos(ang) * rad, Math.sin(ang) * rad, zOff);
+    sp.scale.set(sc, sc * (isSoul ? 1.0 : 0.65), 1);
+    sp.userData = { baseX: Math.cos(ang) * rad, baseY: Math.sin(ang) * rad, zOff, speed: 6 + (i % 4) * 2.5, phase: i * 0.9 };
+    bodyGroup.add(sp);
+    particles.push(sp);
+  }
+
+  // 5. Vòng năng lượng linh hồn mỏng bao quanh thân khi lao đi
+  const auraRing = new THREE.Mesh(
+    new THREE.TorusGeometry(0.64, 0.028, 8, 24),
+    new THREE.MeshBasicMaterial({
+      color: 0xc4b5fd, transparent: true, opacity: 0.68, fog: false,
+      blending: THREE.AdditiveBlending, depthWrite: false
+    })
+  );
+  auraRing.position.z = 0.15;
+  bodyGroup.add(auraRing);
+
+  const light = new THREE.PointLight(0x8b6dff, 3.2, 28);
+  light.position.set(0, 0, -0.4);
+  root.add(light);
+
+  root.userData = {
+    bodyGroup, tendrils, particles, auraRing, light,
+    rimGlowMat, pierceBodyMat, pierceEyeMat
+  };
+  return root;
+}
+
+// Vòng nổ Hư Không đen-tím tại điểm phóng (giống cảnh giật lùi khi Knight tung Shade Soul trong ảnh mẫu)
+function createShadeSoulBurstMesh() {
+  const grp = new THREE.Group();
+
+  const darkRingMat = new THREE.MeshBasicMaterial({
+    color: 0x070510, transparent: true, opacity: 0.92, fog: false,
+    side: THREE.DoubleSide, depthWrite: false
+  });
+  const violetRingMat = new THREE.MeshBasicMaterial({
+    color: 0xa78bfa, transparent: true, opacity: 0.85, fog: false,
+    side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending
+  });
+
+  // Vòng mực đen lớn vuông góc hướng bắn
+  const inkRing = new THREE.Mesh(new THREE.RingGeometry(0.32, 0.72, 24), darkRingMat);
+  grp.add(inkRing);
+
+  // Các tia gai mực đen tỏa ra xung quanh vòng nổ (giống hình ảnh mẫu)
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    const spike = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.55 + (i % 2) * 0.25, 5), darkRingMat);
+    spike.position.set(Math.cos(a) * 0.68, Math.sin(a) * 0.68, 0);
+    spike.rotation.z = a - Math.PI / 2;
+    grp.add(spike);
+  }
+
+  // Sóng linh hồn tím-trắng lan rộng
+  const soulWave = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.045, 8, 28), violetRingMat);
+  grp.add(soulWave);
+
+  const light = new THREE.PointLight(0xa78bfa, 3.6, 22);
+  grp.add(light);
+
+  grp.userData = { darkRingMat, violetRingMat, soulWave, light };
+  return grp;
 }

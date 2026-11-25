@@ -138,7 +138,7 @@
             <button id="btn-clear-bots" class="btn btn-secondary" style="padding:8px; font-size:0.81rem; width:40%;">Xóa Bot</button>
           </div>
 
-          <button id="btn-start-game" class="btn btn-primary hidden">Bắt Đầu Game (3D FPS)</button>
+          <button id="btn-start-game" class="btn btn-primary hidden">Bắt Đầu</button>
           <p id="waiting-host-text" class="hint-text">Đang chờ chủ phòng bắt đầu...</p>
           <p id="lobby-error" class="error-text"></p>
         </div>
@@ -152,6 +152,7 @@
     <div id="crosshair"></div>
     <div id="caught-vignette" class="hidden"></div>
     <div id="xray-vignette" class="hidden"></div>
+    <div id="boost-vignette" class="hidden"></div>
 
     <div id="blind-overlay">
       <div class="blind-text">⚡ BỊ CHÓI ĐÈN PIN! ⚡</div>
@@ -169,6 +170,7 @@
       <div class="hud-row">
         <button id="btn-hud-fs" type="button" class="hud-btn" title="Toàn màn hình">⛶ Full</button>
         <button id="btn-hud-settings" type="button" class="hud-btn" title="Cài đặt độ nhạy">⚙️</button>
+        <button id="btn-hud-bgm" type="button" class="hud-btn" title="Bật / Tắt nhạc nền">🎵</button>
         <div class="hud-box hud-timer" id="hud-timer">00:00</div>
         <div class="hud-box" id="hud-role">Vai trò: ---</div>
       </div>
@@ -176,14 +178,16 @@
         <div class="hud-box" id="hud-stats">Sống: 0 | Giam: 0 | Loại: 0</div>
         <div class="hud-box hidden" id="hud-item-badge">🔦 Trống</div>
         <div class="hud-box hidden" id="hud-xray-badge">👁️ Thấu Thị</div>
+        <div class="hud-box hidden" id="hud-boost-badge">⚡ TĂNG TỐC</div>
         <div class="hud-box hidden" id="hud-blaster-badge">💀 BLASTER</div>
+        <div class="hud-box hidden" id="hud-shade-badge">🌑 SHADE SOUL</div>
       </div>
     </div>
 
     <div id="minimap-wrap" title="Minimap xoay theo hướng nhìn">
       <canvas id="minimap-canvas" width="140" height="140"></canvas>
     </div>
-    <div id="pc-lock-hint" class="hidden">Click màn hình để xoay 360° (WASD đi &bull; F / Chuột phải: Đèn Pin &bull; E: Cứu &bull; ESC mở chuột)</div>
+    <div id="pc-lock-hint" class="hidden">Click màn hình để xoay 360° (WASD đi &bull; Shift: Tăng Tốc &bull; F / Chuột phải: Kỹ năng / Đèn &bull; E: Cứu &bull; ESC mở chuột)</div>
     <div id="mobile-swipe-tip" class="hidden">👆 Vuốt màn hình bên phải để xoay góc nhìn 360°</div>
     <div id="toast-container"></div>
 
@@ -191,6 +195,8 @@
       <div id="rescue-prompt" class="prompt-pill hidden">Nhấn SPACE / E để CỨU!</div>
       <div id="flash-prompt" class="prompt-pill hidden">🔦 Nhấn F / Chuột Phải chiếu ĐÈN PIN!</div>
       <div id="blaster-prompt" class="prompt-pill hidden">💀 Nhấn F / Chuột Phải bắn ĐẦU XƯƠNG!</div>
+      <div id="shade-prompt" class="prompt-pill hidden">🌑 Nhấn F / Chuột Phải phóng SHADE SOUL!</div>
+      <div id="boost-prompt" class="prompt-pill hidden">⚡ Nhấn SHIFT để TĂNG TỐC!</div>
     </div>
 
     <div id="mobile-controls" class="hidden">
@@ -202,6 +208,8 @@
       <button id="btn-mobile-flash" type="button" class="hidden">🔦<br>ĐÈN</button>
       <button id="btn-mobile-rescue" type="button">CỨU</button>
       <button id="btn-mobile-blaster" type="button" class="hidden">💀<br>BẮN</button>
+      <button id="btn-mobile-shade" type="button" class="hidden">🌑<br>SOUL</button>
+      <button id="btn-mobile-boost" type="button" class="hidden">⚡<br>TĂNG</button>
     </div>
 
     <!-- Bảng kết thúc ván -->
@@ -243,6 +251,14 @@
         <button type="button" class="preset-btn" data-touch="1.0" data-mouse="1.0">Chuẩn<br>1.0x</button>
         <button type="button" class="preset-btn" data-touch="1.55" data-mouse="1.45">Nhanh<br>1.55x</button>
         <button type="button" class="preset-btn" data-touch="2.2" data-mouse="2.0">Siêu nhanh<br>2.2x</button>
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-head">
+          <span>🎵 Âm lượng nhạc nền</span>
+          <strong id="val-bgm-vol">40%</strong>
+        </div>
+        <input id="slider-bgm-vol" type="range" min="0" max="1" step="0.05" value="0.40" />
       </div>
 
       <label class="toggle-row">

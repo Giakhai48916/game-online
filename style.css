@@ -802,3 +802,213 @@ input[type="range"] { width: 100%; accent-color: #e3c852; height: 24px; cursor: 
   font-weight: 700;
   color: #a78bfa;
 }
+
+/* Hiệu ứng bị choáng Hư Không (khi trúng Shade Soul của The Knight) */
+#stun-overlay.void-stun {
+  box-shadow: inset 0 0 115px rgba(139, 92, 246, 0.92), inset 0 0 38px rgba(10, 6, 26, 0.92);
+  animation: voidStunPulse 0.45s infinite alternate;
+}
+@keyframes voidStunPulse {
+  from { box-shadow: inset 0 0 80px rgba(91, 33, 182, 0.78), inset 0 0 24px rgba(233, 213, 255, 0.42); }
+  to { box-shadow: inset 0 0 130px rgba(167, 139, 250, 0.96), inset 0 0 42px rgba(255, 255, 255, 0.78); }
+}
+#stun-overlay.void-stun .stun-banner {
+  background: rgba(8, 5, 20, 0.92);
+  border-color: #c4b5fd;
+  box-shadow: 0 0 26px rgba(139, 92, 246, 0.9);
+}
+#stun-overlay.void-stun .stun-title {
+  color: #f5f3ff;
+  text-shadow: 0 0 12px #a78bfa;
+}
+#stun-overlay.void-stun .stun-sub {
+  color: #ddd6fe;
+}
+
+/* HUD & Nút kỹ năng ẩn Shade Soul của The Knight */
+#hud-shade-badge {
+  background: rgba(14, 10, 28, 0.94);
+  border-color: #a78bfa;
+  color: #ddd6fe;
+}
+#hud-shade-badge.ready {
+  background: linear-gradient(135deg, #1e1348, #5b21b6, #0f0a1f);
+  border-color: #f8fafc;
+  color: #ffffff;
+  box-shadow: 0 0 16px rgba(167, 139, 250, 0.95);
+}
+
+#shade-prompt {
+  background: linear-gradient(135deg, #160d35, #4c1d95);
+  border: 1.5px solid #e9d5ff;
+  color: #f8fafc;
+  box-shadow: 0 0 22px rgba(139, 92, 246, 0.92);
+}
+
+#btn-mobile-shade {
+  position: fixed;
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  right: calc(18px + env(safe-area-inset-right));
+  width: 82px;
+  height: 82px;
+  border-radius: 50%;
+  border: 3px solid #f5f3ff;
+  background: radial-gradient(circle, #3b1d7a 0%, #140b2d 62%, #05040a 100%);
+  color: #ffffff;
+  font-size: 0.88rem;
+  font-weight: 900;
+  pointer-events: auto;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.65);
+  opacity: 0.48;
+  transition: transform 0.08s, opacity 0.15s, box-shadow 0.15s;
+  line-height: 1.15;
+}
+#btn-mobile-shade.ready {
+  opacity: 1;
+  box-shadow: 0 0 28px rgba(167, 139, 250, 0.98), 0 0 12px rgba(255, 255, 255, 0.82);
+}
+#btn-mobile-shade:active { transform: scale(0.9); }
+
+/* Khi nhân vật ẩn (Sans / Knight) ở phe Chạy, dịch nút kỹ năng sang trái nút CỨU để không bị đè */
+#btn-mobile-blaster.as-hider,
+#btn-mobile-shade.as-hider {
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  right: calc(108px + env(safe-area-inset-right));
+  width: 74px;
+  height: 74px;
+  font-size: 0.84rem;
+}
+
+@media (max-height: 520px) and (orientation: landscape) {
+  #btn-mobile-shade {
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    right: calc(16px + env(safe-area-inset-right));
+    width: 72px; height: 72px; font-size: 0.8rem;
+  }
+  #btn-mobile-blaster.as-hider,
+  #btn-mobile-shade.as-hider {
+    bottom: calc(16px + env(safe-area-inset-bottom));
+    right: calc(96px + env(safe-area-inset-right));
+    width: 66px; height: 66px; font-size: 0.78rem;
+  }
+}
+
+@media (min-width: 768px) and (min-height: 600px) {
+  #btn-mobile-shade {
+    bottom: calc(32px + env(safe-area-inset-bottom));
+    right: calc(30px + env(safe-area-inset-right));
+    width: 96px; height: 96px; font-size: 1.0rem;
+  }
+  #btn-mobile-blaster.as-hider,
+  #btn-mobile-shade.as-hider {
+    bottom: calc(38px + env(safe-area-inset-bottom));
+    right: calc(140px + env(safe-area-inset-right));
+    width: 86px; height: 86px; font-size: 0.94rem;
+  }
+}
+
+/* Hiệu ứng Tăng Tốc của Người Tìm (Speed Boost) */
+#boost-vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 6;
+  box-shadow: inset 0 0 95px rgba(251, 146, 60, 0.72), inset 0 0 26px rgba(254, 240, 138, 0.45);
+  animation: pulseVignette 0.35s infinite alternate;
+}
+
+#hud-boost-badge {
+  background: rgba(54, 28, 8, 0.92);
+  border-color: #fb923c;
+  color: #fed7aa;
+}
+#hud-boost-badge.ready {
+  background: linear-gradient(135deg, #ea580c, #f59e0b);
+  border-color: #fef08a;
+  color: #171005;
+  box-shadow: 0 0 14px rgba(249, 115, 22, 0.9);
+}
+#hud-boost-badge.active-boost {
+  background: linear-gradient(135deg, #facc15, #f97316);
+  border-color: #ffffff;
+  color: #170d04;
+  box-shadow: 0 0 18px rgba(253, 224, 71, 0.98);
+}
+#hud-boost-badge.final-speed {
+  background: linear-gradient(135deg, #991b1b, #ea580c);
+  border-color: #fdba74;
+  color: #fff7ed;
+  box-shadow: 0 0 12px rgba(234, 88, 12, 0.8);
+}
+
+#boost-prompt {
+  background: linear-gradient(135deg, #c2410c, #f59e0b);
+  border: 1.5px solid #fef08a;
+  color: #171005;
+  box-shadow: 0 0 18px rgba(245, 158, 11, 0.9);
+}
+
+#btn-mobile-boost {
+  position: fixed;
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  right: calc(18px + env(safe-area-inset-right));
+  width: 82px;
+  height: 82px;
+  border-radius: 50%;
+  border: 3px solid #fef08a;
+  background: radial-gradient(circle, #fb923c 0%, #c2410c 72%, #431407 100%);
+  color: #ffffff;
+  font-size: 0.88rem;
+  font-weight: 900;
+  pointer-events: auto;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.58);
+  opacity: 0.48;
+  transition: transform 0.08s, opacity 0.15s, box-shadow 0.15s;
+  line-height: 1.15;
+}
+#btn-mobile-boost.ready {
+  opacity: 1;
+  box-shadow: 0 0 26px rgba(249, 115, 22, 0.98), 0 0 10px rgba(254, 240, 138, 0.85);
+}
+#btn-mobile-boost.active-boost {
+  opacity: 1;
+  background: radial-gradient(circle, #fde047 0%, #ea580c 78%, #7c2d12 100%);
+  color: #170d04;
+  box-shadow: 0 0 30px rgba(253, 224, 71, 1);
+}
+#btn-mobile-boost:active { transform: scale(0.9); }
+
+/* Nếu Người Tìm là nhân vật ẩn (Sans / Knight), dời nút Tăng Tốc sang trái nút kỹ năng ẩn để không bị đè */
+#btn-mobile-boost.with-secret {
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  right: calc(112px + env(safe-area-inset-right));
+  width: 74px;
+  height: 74px;
+  font-size: 0.82rem;
+}
+
+@media (max-height: 520px) and (orientation: landscape) {
+  #btn-mobile-boost {
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    right: calc(16px + env(safe-area-inset-right));
+    width: 72px; height: 72px; font-size: 0.8rem;
+  }
+  #btn-mobile-boost.with-secret {
+    bottom: calc(16px + env(safe-area-inset-bottom));
+    right: calc(98px + env(safe-area-inset-right));
+    width: 66px; height: 66px; font-size: 0.76rem;
+  }
+}
+
+@media (min-width: 768px) and (min-height: 600px) {
+  #btn-mobile-boost {
+    bottom: calc(32px + env(safe-area-inset-bottom));
+    right: calc(30px + env(safe-area-inset-right));
+    width: 96px; height: 96px; font-size: 1.0rem;
+  }
+  #btn-mobile-boost.with-secret {
+    bottom: calc(38px + env(safe-area-inset-bottom));
+    right: calc(140px + env(safe-area-inset-right));
+    width: 86px; height: 86px; font-size: 0.92rem;
+  }
+}
